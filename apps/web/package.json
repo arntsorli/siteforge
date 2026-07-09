@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "vite --host localhost",
     "build": "tsc -b && vite build",
     "lint": "tsc -b --noEmit",
     "test": "vitest run --passWithNoTests"
