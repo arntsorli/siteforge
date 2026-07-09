@@ -441,6 +441,25 @@ button.project-card {
   margin: 0;
 }
 
+.file-input-row {
+  display: grid;
+  gap: 7px;
+  min-height: 44px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.file-input-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-input-row input {
+  width: 100%;
+  min-height: 32px;
+}
+
 .source-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -701,6 +720,8 @@ button.project-card {
   right: 12px;
   top: 68px;
   width: min(340px, calc(100% - 88px));
+  max-height: calc(100% - 92px);
+  overflow: auto;
   display: grid;
   grid-template-columns: 1fr;
   gap: 9px;
@@ -740,6 +761,56 @@ button.project-card {
   width: 32px;
   min-height: 32px;
   padding: 0;
+}
+
+.push-pull-panel {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 246, 0.78);
+}
+
+.push-pull-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.push-pull-heading span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.face-button-grid,
+.push-pull-actions {
+  display: grid;
+  gap: 5px;
+}
+
+.face-button-grid {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.push-pull-actions {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.face-button-grid button,
+.push-pull-actions button {
+  min-height: 31px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.face-button-grid button.active {
+  border-color: var(--ink);
+  background: #f6efe0;
+  font-weight: 800;
 }
 
 .orbit-label {

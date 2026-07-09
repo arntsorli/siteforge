@@ -25,6 +25,23 @@ export interface TerrainSettings {
   ridge: number;
 }
 
+type PushPullFace = "top" | "east" | "west" | "north" | "south";
+type SolidObjectType = Extract<
+  ArchitectureObject["type"],
+  "building" | "garage" | "outbuilding" | "box" | "slab" | "cylinder"
+>;
+
+const SOLID_OBJECT_TYPES: Array<{ value: SolidObjectType; label: string }> = [
+  { value: "box", label: "Box" },
+  { value: "slab", label: "Slab" },
+  { value: "cylinder", label: "Cylinder" },
+  { value: "building", label: "Building" },
+  { value: "garage", label: "Garage" },
+  { value: "outbuilding", label: "Outbuilding" },
+];
+
+const ROOFED_OBJECT_TYPES = new Set<ArchitectureObject["type"]>(["building", "garage", "outbuilding"]);
+
 interface SceneViewerProps {
   area: AreaGeometry;
   terrainUrl?: string;
@@ -55,10 +72,13 @@ export function SceneViewer({
   onLayerChange,
 }: SceneViewerProps) {
   const controlsRef = useRef<any>(null);
+  const areaKey = areaToKey(area);
+  const areaDimensions = useMemo(() => areaDimensionsMeters(area), [areaKey]);
   const satelliteTexture = useSatelliteTexture(area, layers.imagery);
   const [orbitMarker, setOrbitMarker] = useState<OrbitMarkerState | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
   const [toolMode, setToolMode] = useState<"select" | "orbit" | "pan" | "volume" | "terrain">("select");
+  const [pushPullFace, setPushPullFace] = useState<PushPullFace>("top");
 
   const selectedObject = objects.find((item) => item.id === selectedObjectId) ?? objects[0];
   const selectedDimensions = selectedObject ? objectDimensionsMeters(selectedObject, area) : { width: 8, depth: 6 };
@@ -110,6 +130,21 @@ export function SceneViewer({
     const fallbackObject = createObjectFromLocalPoint(new THREE.Vector3(), area, 1);
     onObjectsChange([fallbackObject]);
     onSelectedObjectChange(fallbackObject.id);
+  }
+
+  function updateSelectedObjectType(type: SolidObjectType) {
+    if (!selectedObject) return;
+    replaceObject({
+      ...selectedObject,
+      type,
+      roofType: ROOFED_OBJECT_TYPES.has(type) ? selectedObject.roofType : "flat",
+      name: `${SOLID_OBJECT_TYPES.find((item) => item.value === type)?.label ?? "Solid"} ${objects.indexOf(selectedObject) + 1}`,
+    });
+  }
+
+  function applyPushPull(amount: number) {
+    if (!selectedObject) return;
+    replaceObject(pushPullObjectFace(selectedObject, area, pushPullFace, amount));
   }
 
   function handleTerrainPointerDown(event: ThreeEvent<PointerEvent>) {
@@ -204,6 +239,19 @@ export function SceneViewer({
             {selectedObject ? (
               <>
                 <label>
+                  Primitive
+                  <select
+                    value={solidTypeForObject(selectedObject.type)}
+                    onChange={(event) => updateSelectedObjectType(event.currentTarget.value as SolidObjectType)}
+                  >
+                    {SOLID_OBJECT_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
                   Width
                   <input
                     type="range"
@@ -252,6 +300,7 @@ export function SceneViewer({
                 <label>
                   Roof
                   <select
+                    disabled={!ROOFED_OBJECT_TYPES.has(selectedObject.type)}
                     value={selectedObject.roofType}
                     onChange={(event) =>
                       replaceObject({
@@ -266,6 +315,41 @@ export function SceneViewer({
                     <option value="shed">Shed</option>
                   </select>
                 </label>
+                <div className="push-pull-panel">
+                  <div className="push-pull-heading">
+                    <strong>Push / pull face</strong>
+                    <span>
+                      {selectedDimensions.width.toFixed(1)} x {selectedDimensions.depth.toFixed(1)} x{" "}
+                      {selectedObject.heightMeters.toFixed(1)} m
+                    </span>
+                  </div>
+                  <div className="face-button-grid" aria-label="Face selection">
+                    {(["top", "north", "south", "west", "east"] as const).map((face) => (
+                      <button
+                        key={face}
+                        type="button"
+                        className={pushPullFace === face ? "active" : ""}
+                        onClick={() => setPushPullFace(face)}
+                      >
+                        {face}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="push-pull-actions">
+                    <button type="button" onClick={() => applyPushPull(-1)}>
+                      Push 1 m
+                    </button>
+                    <button type="button" onClick={() => applyPushPull(-0.25)}>
+                      Push 0.25 m
+                    </button>
+                    <button type="button" onClick={() => applyPushPull(0.25)}>
+                      Pull 0.25 m
+                    </button>
+                    <button type="button" onClick={() => applyPushPull(1)}>
+                      Pull 1 m
+                    </button>
+                  </div>
+                </div>
                 <label>
                   Color
                   <input
@@ -344,7 +428,11 @@ export function SceneViewer({
           <ambientLight intensity={0.7} />
           <directionalLight position={[28, 50, 22]} intensity={1.8} castShadow />
           <group onDoubleClick={handleOrbitPoint} onPointerDown={handleTerrainPointerDown}>
-            <Suspense fallback={<SimulatorTerrain terrainSettings={terrainSettings} mode="custom" />}>
+            <Suspense
+              fallback={
+                <SimulatorTerrain terrainSettings={terrainSettings} mode="custom" dimensions={areaDimensions} />
+              }
+            >
               {layers.terrain ? (
                 terrainMode === "generated" && terrainUrl ? (
                   <TerrainModel url={terrainUrl} />
@@ -352,13 +440,16 @@ export function SceneViewer({
                   <SimulatorTerrain
                     terrainSettings={terrainSettings}
                     mode={terrainMode}
+                    dimensions={areaDimensions}
                     terrainTexture={layers.imagery ? satelliteTexture : null}
                   />
                 )
               ) : null}
             </Suspense>
-            {!layers.terrain && layers.imagery ? <FlatImageryFallback texture={satelliteTexture} /> : null}
-            {layers.surface ? <SurfaceLayer /> : null}
+            {!layers.terrain && layers.imagery ? (
+              <FlatImageryFallback texture={satelliteTexture} dimensions={areaDimensions} />
+            ) : null}
+            {layers.surface ? <SurfaceLayer dimensions={areaDimensions} /> : null}
           </group>
           {layers.planning
             ? objects.map((item) => (
@@ -372,7 +463,12 @@ export function SceneViewer({
               ))
             : null}
           {layers.grid ? (
-            <Grid args={[120, 24]} position={[0, 0.03, 0]} cellColor="#769177" sectionColor="#17211f" />
+            <Grid
+              args={[Math.max(areaDimensions.width, areaDimensions.depth), 24]}
+              position={[0, 0.03, 0]}
+              cellColor="#769177"
+              sectionColor="#17211f"
+            />
           ) : null}
           <OrbitPointMarker marker={orbitMarker} />
           <Environment preset="city" />
@@ -394,19 +490,25 @@ export function SceneViewer({
   );
 }
 
-function FlatImageryFallback({ texture }: { texture: THREE.Texture | null }) {
+function FlatImageryFallback({
+  texture,
+  dimensions,
+}: {
+  texture: THREE.Texture | null;
+  dimensions: AreaDimensions;
+}) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
-      <planeGeometry args={[100, 100, 1, 1]} />
+      <planeGeometry args={[dimensions.width, dimensions.depth, 1, 1]} />
       <meshStandardMaterial map={texture ?? undefined} color="#637a50" roughness={0.95} transparent opacity={0.82} />
     </mesh>
   );
 }
 
-function SurfaceLayer() {
+function SurfaceLayer({ dimensions }: { dimensions: AreaDimensions }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 3.1, 0]}>
-      <planeGeometry args={[84, 84, 10, 10]} />
+      <planeGeometry args={[dimensions.width * 0.88, dimensions.depth * 0.88, 10, 10]} />
       <meshStandardMaterial color="#7ca8b6" wireframe transparent opacity={0.35} />
     </mesh>
   );
@@ -432,6 +534,11 @@ function PlanningVolume({
   const height = object.heightMeters || 4;
   const dimensions = objectDimensionsMeters(object, area);
   const position = objectLocalPosition(object, area);
+  const isCylinder = object.type === "cylinder";
+  const cylinderRadius = Math.max(0.5, Math.min(dimensions.width, dimensions.depth) / 2);
+  const edgeSource = isCylinder
+    ? new THREE.CylinderGeometry(cylinderRadius, cylinderRadius, height, 32)
+    : new THREE.BoxGeometry(dimensions.width, height, dimensions.depth);
   return (
     <group
       position={[position.x, 0.15, position.z]}
@@ -441,16 +548,20 @@ function PlanningVolume({
       }}
     >
       <mesh castShadow receiveShadow position={[0, height / 2, 0]}>
-        <boxGeometry args={[dimensions.width, height, dimensions.depth]} />
+        {isCylinder ? (
+          <cylinderGeometry args={[cylinderRadius, cylinderRadius, height, 32]} />
+        ) : (
+          <boxGeometry args={[dimensions.width, height, dimensions.depth]} />
+        )}
         <meshStandardMaterial color={color} transparent opacity={selected ? 0.86 : 0.68} />
       </mesh>
       {selected ? (
         <lineSegments position={[0, height / 2, 0]}>
-          <edgesGeometry args={[new THREE.BoxGeometry(dimensions.width, height, dimensions.depth)]} />
+          <edgesGeometry args={[edgeSource]} />
           <lineBasicMaterial color="#17211f" />
         </lineSegments>
       ) : null}
-      {object.roofType !== "flat" ? (
+      {ROOFED_OBJECT_TYPES.has(object.type) && object.roofType !== "flat" ? (
         <mesh position={[0, height + 1.3, 0]} rotation={[0, Math.PI / 4, 0]}>
           <coneGeometry args={[Math.max(dimensions.width, dimensions.depth) * 0.58, 2.6, 4]} />
           <meshStandardMaterial color="#9f5138" transparent opacity={0.78} />
@@ -463,16 +574,17 @@ function PlanningVolume({
 function SimulatorTerrain({
   terrainSettings,
   mode,
+  dimensions,
   terrainTexture,
 }: {
   terrainSettings: TerrainSettings;
   mode: TerrainMode;
+  dimensions: AreaDimensions;
   terrainTexture?: THREE.Texture | null;
 }) {
   const geometry = useMemo(() => {
-    const size = 96;
     const segments = 64;
-    const nextGeometry = new THREE.PlaneGeometry(size, size, segments, segments);
+    const nextGeometry = new THREE.PlaneGeometry(dimensions.width, dimensions.depth, segments, segments);
     const positions = nextGeometry.attributes.position;
     for (let index = 0; index < positions.count; index += 1) {
       const x = positions.getX(index);
@@ -481,12 +593,14 @@ function SimulatorTerrain({
         mode === "flat"
           ? 0
           : terrainSettings.relief *
-            (Math.sin(x / 13) * 0.45 + Math.cos(y / 16) * 0.35 + terrainSettings.ridge * (x / size) * 0.06);
+            (Math.sin(x / 13) * 0.45 +
+              Math.cos(y / 16) * 0.35 +
+              terrainSettings.ridge * (x / Math.max(1, dimensions.width)) * 0.06);
       positions.setZ(index, relief * (1 - terrainSettings.flatten));
     }
     nextGeometry.computeVertexNormals();
     return nextGeometry;
-  }, [mode, terrainSettings.flatten, terrainSettings.relief, terrainSettings.ridge]);
+  }, [dimensions.depth, dimensions.width, mode, terrainSettings.flatten, terrainSettings.relief, terrainSettings.ridge]);
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
@@ -503,6 +617,7 @@ function SimulatorTerrain({
 function useSatelliteTexture(area: AreaGeometry, enabled: boolean) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
   const areaKey = areaToKey(area);
+  const bounds = useMemo(() => areaBounds(area), [areaKey]);
 
   useEffect(() => {
     if (!enabled) {
@@ -510,7 +625,7 @@ function useSatelliteTexture(area: AreaGeometry, enabled: boolean) {
       return undefined;
     }
 
-    const { canvas, texture: nextTexture } = createFallbackSatelliteTexture();
+    const { canvas, texture: nextTexture } = createFallbackSatelliteTexture(area, bounds);
     setTexture(nextTexture);
 
     let cancelled = false;
@@ -522,6 +637,7 @@ function useSatelliteTexture(area: AreaGeometry, enabled: boolean) {
       if (!context) return;
       try {
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        drawAreaSelectionOverlay(context, area, bounds, canvas.width, canvas.height);
         drawTerrainMaskOverlay(context, canvas.width, canvas.height);
         nextTexture.needsUpdate = true;
         setTexture(nextTexture);
@@ -532,28 +648,28 @@ function useSatelliteTexture(area: AreaGeometry, enabled: boolean) {
     image.onerror = () => {
       nextTexture.needsUpdate = true;
     };
-    image.src = esriSatelliteTileUrl(area);
+    image.src = esriSatelliteExportUrl(bounds, canvas.width);
 
     return () => {
       cancelled = true;
     };
-  }, [areaKey, enabled]);
+  }, [area, areaKey, bounds, enabled]);
 
   return texture;
 }
 
-function createFallbackSatelliteTexture() {
+function createFallbackSatelliteTexture(area: AreaGeometry, bounds: AreaBounds) {
   const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 512;
+  canvas.width = 1024;
+  canvas.height = 1024;
   const context = canvas.getContext("2d");
   if (context) {
-    const gradient = context.createLinearGradient(0, 0, 512, 512);
+    const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
     gradient.addColorStop(0, "#46583c");
     gradient.addColorStop(0.45, "#7a8657");
     gradient.addColorStop(1, "#394d3d");
     context.fillStyle = gradient;
-    context.fillRect(0, 0, 512, 512);
+    context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "rgba(211, 197, 137, 0.42)";
     context.fillRect(52, 70, 160, 112);
     context.fillRect(250, 260, 180, 118);
@@ -561,14 +677,62 @@ function createFallbackSatelliteTexture() {
     context.lineWidth = 12;
     context.beginPath();
     context.moveTo(0, 390);
-    context.bezierCurveTo(130, 300, 230, 360, 512, 210);
+    context.bezierCurveTo(260, 600, 460, 720, canvas.width, 420);
     context.stroke();
-    drawTerrainMaskOverlay(context, 512, 512);
+    drawAreaSelectionOverlay(context, area, bounds, canvas.width, canvas.height);
+    drawTerrainMaskOverlay(context, canvas.width, canvas.height);
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
   return { canvas, texture };
+}
+
+function drawAreaSelectionOverlay(
+  context: CanvasRenderingContext2D,
+  area: AreaGeometry,
+  bounds: AreaBounds,
+  width: number,
+  height: number,
+) {
+  context.save();
+  context.lineWidth = 4;
+  context.strokeStyle = "rgba(251, 250, 244, 0.78)";
+  if (area.type === "BBox") {
+    context.strokeRect(2, 2, width - 4, height - 4);
+    context.restore();
+    return;
+  }
+  const ring = area.coordinates[0] ?? [];
+  if (ring.length < 3) {
+    context.restore();
+    return;
+  }
+  context.beginPath();
+  context.rect(0, 0, width, height);
+  ring.forEach((position, index) => {
+    const point = positionToTexturePoint(position, bounds, width, height);
+    if (index === 0) {
+      context.moveTo(point.x, point.y);
+    } else {
+      context.lineTo(point.x, point.y);
+    }
+  });
+  context.closePath();
+  context.fillStyle = "rgba(23, 33, 31, 0.28)";
+  context.fill("evenodd");
+  context.beginPath();
+  ring.forEach((position, index) => {
+    const point = positionToTexturePoint(position, bounds, width, height);
+    if (index === 0) {
+      context.moveTo(point.x, point.y);
+    } else {
+      context.lineTo(point.x, point.y);
+    }
+  });
+  context.closePath();
+  context.stroke();
+  context.restore();
 }
 
 function drawTerrainMaskOverlay(context: CanvasRenderingContext2D, width: number, height: number) {
@@ -580,20 +744,9 @@ function drawTerrainMaskOverlay(context: CanvasRenderingContext2D, width: number
   }
 }
 
-function esriSatelliteTileUrl(area: AreaGeometry) {
-  const center = areaCenter(area);
-  const zoom = 17;
-  const tile = lonLatToTile(center.lon, center.lat, zoom);
-  return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${tile.y}/${tile.x}`;
-}
-
-function lonLatToTile(lon: number, lat: number, zoom: number) {
-  const latRad = (lat * Math.PI) / 180;
-  const scale = 2 ** zoom;
-  return {
-    x: Math.floor(((lon + 180) / 360) * scale),
-    y: Math.floor(((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * scale),
-  };
+function esriSatelliteExportUrl(bounds: AreaBounds, size: number) {
+  const bbox = [bounds.west, bounds.south, bounds.east, bounds.north].map((value) => value.toFixed(7)).join(",");
+  return `https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=4326&size=${size},${size}&format=jpg&f=image`;
 }
 
 function createObjectFromLocalPoint(
@@ -605,13 +758,14 @@ function createObjectFromLocalPoint(
   depth = 6,
 ): ArchitectureObject {
   const footprint = localRectToFootprint(point.x, point.z, width, depth, area);
+  const type = overrides.type ?? "box";
   return {
     id: `object-${crypto.randomUUID()}`,
-    type: overrides.type ?? "building",
-    name: `Volume ${index}`,
+    type,
+    name: `${SOLID_OBJECT_TYPES.find((item) => item.value === type)?.label ?? "Solid"} ${index}`,
     footprint,
     heightMeters: overrides.heightMeters ?? 4,
-    roofType: overrides.roofType ?? "gable",
+    roofType: overrides.roofType ?? (ROOFED_OBJECT_TYPES.has(type) ? "gable" : "flat"),
     roofPitchDegrees: overrides.roofPitchDegrees ?? 22,
     materialColor: overrides.materialColor ?? "#d7894a",
     terrainSnapMode: overrides.terrainSnapMode ?? "projected",
@@ -621,6 +775,36 @@ function createObjectFromLocalPoint(
 function resizeObjectFootprint(object: ArchitectureObject, area: AreaGeometry, width: number, depth: number) {
   const local = objectLocalPosition(object, area);
   return { ...object, footprint: localRectToFootprint(local.x, local.z, width, depth, area) };
+}
+
+function pushPullObjectFace(
+  object: ArchitectureObject,
+  area: AreaGeometry,
+  face: PushPullFace,
+  amount: number,
+): ArchitectureObject {
+  if (face === "top") {
+    return { ...object, heightMeters: clamp(object.heightMeters + amount, 0.2, 60) };
+  }
+  const dimensions = objectDimensionsMeters(object, area);
+  const local = objectLocalPosition(object, area);
+  let width = dimensions.width;
+  let depth = dimensions.depth;
+  let x = local.x;
+  let z = local.z;
+  if (face === "east" || face === "west") {
+    const nextWidth = clamp(width + amount, 0.5, 80);
+    const delta = nextWidth - width;
+    width = nextWidth;
+    x += face === "east" ? delta / 2 : -delta / 2;
+  }
+  if (face === "south" || face === "north") {
+    const nextDepth = clamp(depth + amount, 0.5, 80);
+    const delta = nextDepth - depth;
+    depth = nextDepth;
+    z += face === "south" ? delta / 2 : -delta / 2;
+  }
+  return { ...object, footprint: localRectToFootprint(x, z, width, depth, area) };
 }
 
 function localRectToFootprint(x: number, z: number, width: number, depth: number, area: AreaGeometry) {
@@ -653,6 +837,14 @@ function objectDimensionsMeters(object: ArchitectureObject, area: AreaGeometry) 
   };
 }
 
+function solidTypeForObject(type: ArchitectureObject["type"]): SolidObjectType {
+  return SOLID_OBJECT_TYPES.some((item) => item.value === type) ? (type as SolidObjectType) : "box";
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function localToPosition(x: number, z: number, area: AreaGeometry): Position {
   const center = areaCenter(area);
   const metersPerLon = metersPerDegreeLon(center.lat);
@@ -672,14 +864,59 @@ function metersPerDegreeLon(lat: number) {
 }
 
 function areaCenter(area: AreaGeometry) {
-  if (area.type === "BBox") {
-    return { lon: (area.west + area.east) / 2, lat: (area.south + area.north) / 2 };
-  }
-  const outer = area.coordinates[0] ?? [];
-  const count = Math.max(1, outer.length);
+  const bounds = areaBounds(area);
   return {
-    lon: outer.reduce((sum, point) => sum + point[0], 0) / count,
-    lat: outer.reduce((sum, point) => sum + point[1], 0) / count,
+    lon: (bounds.west + bounds.east) / 2,
+    lat: (bounds.south + bounds.north) / 2,
+  };
+}
+
+interface AreaBounds {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+interface AreaDimensions {
+  width: number;
+  depth: number;
+}
+
+function areaBounds(area: AreaGeometry): AreaBounds {
+  if (area.type === "BBox") {
+    return area;
+  }
+  const ring = area.coordinates[0] ?? [];
+  const positions = ring.length > 1 && ring[0] === ring[ring.length - 1] ? ring.slice(0, -1) : ring;
+  if (!positions.length) {
+    return { west: 0, south: 0, east: 0.001, north: 0.001 };
+  }
+  const lons = positions.map((point) => point[0]);
+  const lats = positions.map((point) => point[1]);
+  return {
+    west: Math.min(...lons),
+    south: Math.min(...lats),
+    east: Math.max(...lons),
+    north: Math.max(...lats),
+  };
+}
+
+function areaDimensionsMeters(area: AreaGeometry): AreaDimensions {
+  const bounds = areaBounds(area);
+  const centerLat = (bounds.south + bounds.north) / 2;
+  return {
+    width: Math.max(24, Math.abs(bounds.east - bounds.west) * metersPerDegreeLon(centerLat)),
+    depth: Math.max(24, Math.abs(bounds.north - bounds.south) * 111_320),
+  };
+}
+
+function positionToTexturePoint(position: Position, bounds: AreaBounds, width: number, height: number) {
+  const lonSpan = Math.max(0.000001, bounds.east - bounds.west);
+  const latSpan = Math.max(0.000001, bounds.north - bounds.south);
+  return {
+    x: ((position[0] - bounds.west) / lonSpan) * width,
+    y: ((bounds.north - position[1]) / latSpan) * height,
   };
 }
 

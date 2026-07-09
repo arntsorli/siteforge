@@ -51,7 +51,17 @@ class TerrainLayer(BaseModel):
 
 class ArchitectureObject(BaseModel):
     id: str = Field(default_factory=lambda: f"object-{uuid4().hex[:10]}")
-    type: Literal["building", "garage", "outbuilding", "driveway", "path", "cutFill"] = "building"
+    type: Literal[
+        "building",
+        "garage",
+        "outbuilding",
+        "box",
+        "slab",
+        "cylinder",
+        "driveway",
+        "path",
+        "cutFill",
+    ] = "building"
     name: str = "Planning volume"
     footprint: PolygonGeometry
     heightMeters: float = 4.0

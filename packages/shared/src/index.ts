@@ -43,7 +43,16 @@ export interface TerrainLayer {
 
 export interface ArchitectureObject {
   id: string;
-  type: "building" | "garage" | "outbuilding" | "driveway" | "path" | "cutFill";
+  type:
+    | "building"
+    | "garage"
+    | "outbuilding"
+    | "box"
+    | "slab"
+    | "cylinder"
+    | "driveway"
+    | "path"
+    | "cutFill";
   name: string;
   footprint: PolygonGeometry;
   heightMeters: number;
@@ -94,4 +103,3 @@ export interface TerrainJobResponse {
   terrainGlbUrl: string;
   metadataUrl: string;
 }
-

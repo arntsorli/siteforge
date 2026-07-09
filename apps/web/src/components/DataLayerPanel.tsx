@@ -13,8 +13,10 @@ export interface LayerVisibility {
 interface DataLayerPanelProps {
   mapViewMode: MapViewMode;
   layers: LayerVisibility;
+  lidarFileName: string;
   onMapViewModeChange: (mode: MapViewMode) => void;
   onLayerChange: (layers: LayerVisibility) => void;
+  onLidarFileChange: (file: File | null) => void;
   onLoadFortenvegenData: () => void;
   onUseFlatFallback: () => void;
   hasGeneratedTerrain: boolean;
@@ -23,8 +25,10 @@ interface DataLayerPanelProps {
 export function DataLayerPanel({
   mapViewMode,
   layers,
+  lidarFileName,
   onMapViewModeChange,
   onLayerChange,
+  onLidarFileChange,
   onLoadFortenvegenData,
   onUseFlatFallback,
   hasGeneratedTerrain,
@@ -63,7 +67,7 @@ export function DataLayerPanel({
           <Mountain size={18} />
           <strong>Height data</strong>
         </div>
-        <p className="fineprint no-margin">Use Høydedata DTM when available, or continue with editable custom terrain.</p>
+        <p className="fineprint no-margin">Use Hoydedata DTM when available, or continue with editable custom terrain.</p>
         <div className="data-actions">
           <button type="button" onClick={onLoadFortenvegenData}>
             <Map size={18} /> Fortenvegen preset
@@ -109,12 +113,28 @@ export function DataLayerPanel({
         </div>
       </section>
 
-      <section className="data-config-section muted-section">
+      <section className="data-config-section">
         <div className="data-section-title">
           <ScanLine size={18} />
           <strong>LiDAR / surface</strong>
         </div>
-        <p className="fineprint no-margin">Surface/LiDAR is still a placeholder layer until the provider pipeline matures.</p>
+        <label className="file-input-row">
+          <span>{lidarFileName || "Stage LAS/LAZ or DSM GeoTIFF"}</span>
+          <input
+            type="file"
+            accept=".las,.laz,.tif,.tiff,.geotiff"
+            onChange={(event) => onLidarFileChange(event.currentTarget.files?.[0] ?? null)}
+          />
+        </label>
+        <label className="switch-row">
+          <span>Show staged surface preview</span>
+          <input
+            type="checkbox"
+            checked={layers.surface}
+            onChange={(event) => onLayerChange({ ...layers, surface: event.currentTarget.checked })}
+          />
+        </label>
+        <p className="fineprint no-margin">Local point-cloud meshing will use this input once the PDAL/laspy pipeline is wired.</p>
       </section>
     </section>
   );

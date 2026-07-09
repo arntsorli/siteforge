@@ -43,6 +43,7 @@ export default function App() {
     flatten: 0.15,
     ridge: 2,
   });
+  const [lidarFileName, setLidarFileName] = useState("");
   const [layers, setLayers] = useState<LayerVisibility>({
     terrain: true,
     imagery: false,
@@ -116,6 +117,17 @@ export default function App() {
     setWorkflowStep("planning");
     setView("workspace");
     setStatus("Using flat terrain with imagery overlay fallback while elevation/LiDAR data is unavailable.");
+  }
+
+  function stageLidarFile(file: File | null) {
+    if (!file) {
+      setLidarFileName("");
+      setStatus("Cleared the staged LiDAR/surface input.");
+      return;
+    }
+    setLidarFileName(file.name);
+    setLayers({ ...layers, surface: true });
+    setStatus(`${file.name} staged as LiDAR/surface input. Surface preview is enabled while meshing is being wired.`);
   }
 
   function openProject(nextProject: SiteForgeProject) {
@@ -324,8 +336,10 @@ export default function App() {
             <DataLayerPanel
               mapViewMode={mapViewMode}
               layers={layers}
+              lidarFileName={lidarFileName}
               onMapViewModeChange={setMapViewMode}
               onLayerChange={setLayers}
+              onLidarFileChange={stageLidarFile}
               onLoadFortenvegenData={loadFortenvegenData}
               onUseFlatFallback={useFlatFallback}
               hasGeneratedTerrain={Boolean(terrainUrl)}
