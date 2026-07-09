@@ -48,3 +48,11 @@ Keep each milestone buildable before committing and pushing.
 - [x] Add provider placeholders/adapters for LiDAR/surface and satellite/orthophoto data.
 - [x] Add API responses that distinguish live data, cached data, and fallback data.
 - [x] Add tests for provider status and fallback metadata.
+
+## Milestone 7 - Project Workflow App Structure
+
+- [x] Keep the home page as a normal project manager with no workflow tabs.
+- [x] Move opened projects into a left-to-right workflow: Terrain / Data, 3D Planning, Review, Export.
+- [x] Put data-source changes in the Terrain / Data step and leave only visibility toggles in later steps.
+- [x] Give each workflow step a central canvas/work area with left and right edge panels.
+- [x] Defer camera orbit-target changes until orbit interaction starts.

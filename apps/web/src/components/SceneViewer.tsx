@@ -36,13 +36,22 @@ export function SceneViewer({
   onTerrainSettingsChange,
 }: SceneViewerProps) {
   const controlsRef = useRef<any>(null);
+  const pendingOrbitPointRef = useRef<THREE.Vector3 | null>(null);
   const [orbitMarker, setOrbitMarker] = useState<OrbitMarkerState | null>(null);
   const [toolMode, setToolMode] = useState<"select" | "orbit" | "pan" | "volume" | "terrain">("select");
 
-  function updateOrbitPoint(point: THREE.Vector3) {
-    controlsRef.current?.target.copy(point);
+  function markOrbitPoint(point: THREE.Vector3) {
+    const nextPoint = point.clone();
+    pendingOrbitPointRef.current = nextPoint;
+    setOrbitMarker({ point: nextPoint.toArray(), shownAt: performance.now() });
+  }
+
+  function applyPendingOrbitPoint() {
+    const pendingPoint = pendingOrbitPointRef.current;
+    if (!pendingPoint) return;
+    controlsRef.current?.target.copy(pendingPoint);
     controlsRef.current?.update();
-    setOrbitMarker({ point: point.toArray(), shownAt: performance.now() });
+    setOrbitMarker({ point: pendingPoint.toArray(), shownAt: performance.now() });
   }
 
   function showCurrentOrbitPoint() {
@@ -52,7 +61,7 @@ export function SceneViewer({
 
   function handleScenePoint(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
-    updateOrbitPoint(event.point);
+    markOrbitPoint(event.point);
   }
 
   return (
@@ -131,6 +140,8 @@ export function SceneViewer({
             enableDamping
             dampingFactor={0.16}
             screenSpacePanning
+            onStart={applyPendingOrbitPoint}
+            onEnd={showCurrentOrbitPoint}
             mouseButtons={{
               LEFT: THREE.MOUSE.ROTATE,
               MIDDLE: THREE.MOUSE.DOLLY,

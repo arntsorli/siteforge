@@ -67,6 +67,7 @@ button:disabled {
 .map-panel,
 .scene-panel,
 .project-panel,
+.export-panel,
 .identity-panel {
   border: 1px solid var(--line);
   background: var(--panel);
@@ -79,6 +80,10 @@ button:disabled {
   gap: 16px;
   align-items: center;
   padding: 14px 16px;
+}
+
+.home-header {
+  justify-content: flex-start;
 }
 
 .brand-lockup,
@@ -94,6 +99,40 @@ button:disabled {
 .brand-lockup img {
   width: 48px;
   height: 48px;
+}
+
+.workflow-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.workflow-tabs button {
+  min-height: 40px;
+  border-color: transparent;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.workflow-tabs button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #dfe7d9;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.workflow-tabs button.active {
+  border-color: #8a9b8a;
+  background: #fffdf6;
+  font-weight: 800;
 }
 
 h1,
@@ -139,6 +178,40 @@ h2 {
   display: grid;
   grid-template-columns: minmax(340px, 0.9fr) minmax(420px, 1.35fr);
   gap: 14px;
+}
+
+.workflow-shell {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.28fr) minmax(520px, 1fr) minmax(280px, 0.34fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.workflow-main {
+  min-width: 0;
+}
+
+.edge-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.workflow-main > .map-panel,
+.workflow-main > .scene-panel,
+.workflow-main > .export-panel,
+.review-panel {
+  min-height: calc(100vh - 172px);
+}
+
+.workflow-main .map-canvas,
+.planning-workflow .scene-canvas {
+  height: calc(100vh - 310px);
+  min-height: 480px;
+}
+
+.review-workflow .source-list article {
+  grid-template-columns: 1fr 1.2fr auto;
 }
 
 .dashboard-panel {
@@ -235,7 +308,8 @@ h2 {
 .map-panel,
 .data-panel,
 .scene-panel,
-.project-panel {
+.project-panel,
+.export-panel {
   padding: 12px;
 }
 
@@ -389,6 +463,11 @@ h2 {
   gap: 8px;
 }
 
+.metadata-grid.single-column {
+  grid-template-columns: 1fr;
+  margin-top: 8px;
+}
+
 .metadata-grid div {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -405,6 +484,13 @@ h2 {
   padding: 0 8px;
   background: #ffffff;
   color: var(--ink);
+}
+
+.project-name-field.compact {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fffdf6;
 }
 
 .metadata-grid span {
@@ -529,6 +615,10 @@ h2 {
   margin: 0;
 }
 
+.compact-layers {
+  grid-template-columns: 1fr;
+}
+
 .data-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -536,12 +626,45 @@ h2 {
   margin-top: 10px;
 }
 
+.export-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+
+.export-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.export-actions button {
+  min-height: 54px;
+  font-weight: 800;
+}
+
+.export-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.export-summary > div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fffdf6;
+}
+
 @media (max-width: 1050px) {
   .workspace-grid,
+  .workflow-shell,
   .dashboard-hero,
   .object-editor,
   .terrain-editor,
   .metadata-grid,
+  .export-summary,
+  .export-actions,
   .layer-toggle-grid,
   .data-actions {
     grid-template-columns: 1fr;
@@ -553,13 +676,25 @@ h2 {
     flex-direction: column;
   }
 
-  .header-actions {
+  .header-actions,
+  .workflow-tabs {
     flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .map-canvas,
-  .scene-canvas {
+  .scene-canvas,
+  .workflow-main .map-canvas,
+  .planning-workflow .scene-canvas {
     height: 380px;
+    min-height: 380px;
+  }
+
+  .workflow-main > .map-panel,
+  .workflow-main > .scene-panel,
+  .workflow-main > .export-panel,
+  .review-panel {
+    min-height: auto;
   }
 }
 
