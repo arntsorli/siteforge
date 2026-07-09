@@ -1,12 +1,15 @@
 import type { AreaGeometry, Position } from "@siteforge/shared";
 import type { FeatureCollection, Polygon } from "geojson";
-import { BoxSelect, LocateFixed, RotateCcw } from "lucide-react";
+import { BoxSelect, Home, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { type GeoJSONSource, type Map } from "maplibre-gl";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { MapViewMode } from "./DataLayerPanel";
 
 interface MapSelectorProps {
   selectedArea: AreaGeometry;
+  mapViewMode: MapViewMode;
   onAreaChange: (area: AreaGeometry) => void;
+  onFortenvegen: () => void;
 }
 
 const OSLO_TEST_AREA: AreaGeometry = {
@@ -17,7 +20,7 @@ const OSLO_TEST_AREA: AreaGeometry = {
   north: 59.9148,
 };
 
-export function MapSelector({ selectedArea, onAreaChange }: MapSelectorProps) {
+export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenvegen }: MapSelectorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const [points, setPoints] = useState<Position[]>([]);
@@ -52,8 +55,19 @@ export function MapSelector({ selectedArea, onAreaChange }: MapSelectorProps) {
             tileSize: 256,
             attribution: "OpenStreetMap contributors",
           },
+          satellite: {
+            type: "raster",
+            tiles: [
+              "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            ],
+            tileSize: 256,
+            attribution: "Esri World Imagery",
+          },
         },
-        layers: [{ id: "osm", type: "raster", source: "osm" }],
+        layers: [
+          { id: "satellite", type: "raster", source: "satellite", paint: { "raster-opacity": 0 } },
+          { id: "osm", type: "raster", source: "osm", paint: { "raster-opacity": 1 } },
+        ],
       },
     });
 
@@ -114,6 +128,15 @@ export function MapSelector({ selectedArea, onAreaChange }: MapSelectorProps) {
     );
   }, [selectedArea]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded()) return;
+    const osmOpacity = mapViewMode === "satellite" ? 0 : mapViewMode === "overlay" ? 0.5 : 1;
+    const satelliteOpacity = mapViewMode === "map" ? 0 : mapViewMode === "overlay" ? 0.7 : 1;
+    map.setPaintProperty("osm", "raster-opacity", osmOpacity);
+    map.setPaintProperty("satellite", "raster-opacity", satelliteOpacity);
+  }, [mapViewMode]);
+
   function useVisibleBounds() {
     const bounds = mapRef.current?.getBounds();
     if (!bounds) return;
@@ -137,6 +160,9 @@ export function MapSelector({ selectedArea, onAreaChange }: MapSelectorProps) {
         <div className="toolbar">
           <button type="button" onClick={() => onAreaChange(OSLO_TEST_AREA)} title="Use small Oslo test area">
             <LocateFixed size={18} />
+          </button>
+          <button type="button" onClick={onFortenvegen} title="Use Fortenvegen 100 preset">
+            <Home size={18} />
           </button>
           <button type="button" onClick={useVisibleBounds} title="Use visible map bounds">
             <BoxSelect size={18} />

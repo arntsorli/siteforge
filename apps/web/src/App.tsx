@@ -5,6 +5,11 @@ import identityImage from "./assets/siteforge-terrain-identity.png";
 import { MapSelector } from "./components/MapSelector";
 import { ProjectDashboard } from "./components/ProjectDashboard";
 import { SceneViewer } from "./components/SceneViewer";
+import {
+  DataLayerPanel,
+  type LayerVisibility,
+  type MapViewMode,
+} from "./components/DataLayerPanel";
 import { artifactUrl, createTerrainJob, exportGlb, saveProject } from "./lib/api";
 import {
   captureScenePreview,
@@ -25,6 +30,14 @@ export default function App() {
   const [project, setProject] = useState<SiteForgeProject | null>(null);
   const [object, setObject] = useState<ArchitectureObject>(DEFAULT_OBJECT);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [mapViewMode, setMapViewMode] = useState<MapViewMode>("overlay");
+  const [layers, setLayers] = useState<LayerVisibility>({
+    terrain: true,
+    imagery: false,
+    surface: false,
+    planning: true,
+    grid: true,
+  });
   const [status, setStatus] = useState("Start blank, open a recent project, or focus Fortenvegen 100.");
   const [busy, setBusy] = useState(false);
 
@@ -50,7 +63,35 @@ export default function App() {
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
     setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setMapViewMode("overlay");
     setStatus("Fortenvegen project opened. Load map/elevation data when ready.");
+  }
+
+  function loadFortenvegenData() {
+    if (!project) {
+      startFortenvegenProject();
+    } else {
+      setProject({
+        ...project,
+        name: project.name || "Fortenvegen 100, Gran",
+        areaGeometry: FORTENVEGEN_AREA,
+        updatedAt: new Date().toISOString(),
+      });
+      setArea(FORTENVEGEN_AREA);
+    }
+    setMapViewMode("overlay");
+    setLayers({ terrain: true, imagery: true, surface: true, planning: true, grid: true });
+    setStatus("Fortenvegen map, imagery fallback, DTM request, and future surface layer are staged.");
+  }
+
+  function useFlatFallback() {
+    const workingProject = project ?? createLocalProject("Flat imagery fallback project", FORTENVEGEN_AREA);
+    setProject(workingProject);
+    setArea(workingProject.areaGeometry);
+    setObject(workingProject.objects[0] ?? DEFAULT_OBJECT);
+    setMapViewMode("satellite");
+    setLayers({ terrain: false, imagery: true, surface: false, planning: true, grid: true });
+    setStatus("Using flat terrain with imagery overlay fallback while elevation/LiDAR data is unavailable.");
   }
 
   function openProject(nextProject: SiteForgeProject) {
@@ -181,7 +222,21 @@ export default function App() {
 
       <div className="workspace-grid">
         <div className="left-stack">
-          <MapSelector selectedArea={area} onAreaChange={setArea} />
+          <MapSelector
+            selectedArea={area}
+            mapViewMode={mapViewMode}
+            onAreaChange={setArea}
+            onFortenvegen={loadFortenvegenData}
+          />
+          <DataLayerPanel
+            mapViewMode={mapViewMode}
+            layers={layers}
+            onMapViewModeChange={setMapViewMode}
+            onLayerChange={setLayers}
+            onLoadFortenvegenData={loadFortenvegenData}
+            onUseFlatFallback={useFlatFallback}
+            hasGeneratedTerrain={Boolean(terrainUrl)}
+          />
           <section className="identity-panel">
             <img src={identityImage} alt="Stylized 3D terrain planning scene" />
             <div>
@@ -196,7 +251,7 @@ export default function App() {
         </div>
 
         <div className="right-stack">
-          <SceneViewer terrainUrl={terrainUrl} object={object} onObjectChange={setObject} />
+          <SceneViewer terrainUrl={terrainUrl} object={object} layers={layers} onObjectChange={setObject} />
           <section className="project-panel">
             <div className="panel-heading">
               <div>

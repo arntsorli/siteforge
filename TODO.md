@@ -17,11 +17,11 @@ Keep each milestone buildable before committing and pushing.
 
 ## Milestone 2 - Fortenvegen Data Workflow And Layer Views
 
-- [ ] Make Fortenvegen 100, 2750 Gran the primary preset area.
-- [ ] Add data-source status cards for map, height/DTM, LiDAR/surface, and satellite/imagery.
-- [ ] Add layer visibility controls and a split/overlay mode where it helps compare source data.
-- [ ] Keep a flat terrain plus satellite/map-image fallback path when elevation/LiDAR data is missing.
-- [ ] Preserve attribution and rough-planning warnings for every source/fallback.
+- [x] Make Fortenvegen 100, 2750 Gran the primary preset area.
+- [x] Add data-source status cards for map, height/DTM, LiDAR/surface, and satellite/imagery.
+- [x] Add layer visibility controls and a split/overlay mode where it helps compare source data.
+- [x] Keep a flat terrain plus satellite/map-image fallback path when elevation/LiDAR data is missing.
+- [x] Preserve attribution and rough-planning warnings for every source/fallback.
 
 ## Milestone 3 - Blank And Default Terrain Modes
 

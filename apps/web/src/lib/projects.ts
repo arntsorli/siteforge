@@ -11,10 +11,10 @@ export interface RecentProject {
 
 export const FORTENVEGEN_AREA: AreaGeometry = {
   type: "BBox",
-  west: 10.5468,
-  south: 60.3562,
-  east: 10.5504,
-  north: 60.3588,
+  west: 10.5006,
+  south: 60.3724,
+  east: 10.5054,
+  north: 60.3748,
 };
 
 export const OSLO_SAMPLE_AREA: AreaGeometry = {
@@ -33,11 +33,11 @@ export const DEFAULT_OBJECT: ArchitectureObject = {
     type: "Polygon",
     coordinates: [
       [
-        [10.5478, 60.3569],
-        [10.5484, 60.3569],
-        [10.5484, 60.3574],
-        [10.5478, 60.3574],
-        [10.5478, 60.3569],
+        [10.5025, 60.3733],
+        [10.5034, 60.3733],
+        [10.5034, 60.3739],
+        [10.5025, 60.3739],
+        [10.5025, 60.3733],
       ],
     ],
   },
@@ -73,6 +73,7 @@ export function createLocalProject(
     exports: [],
     warnings: [
       "Rough planning only. SiteForge output is not surveying, engineering documentation, or construction-ready geometry.",
+      "Fortenvegen preset is based on OpenStreetMap/Nominatim address geocoding and should be checked before detailed planning.",
     ],
   };
 }
@@ -134,4 +135,3 @@ export function locationLabel(area: AreaGeometry): string {
   const first = area.coordinates[0]?.[0];
   return first ? `${first[1].toFixed(5)}, ${first[0].toFixed(5)}` : "Custom polygon";
 }
-

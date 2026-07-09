@@ -3,14 +3,16 @@ import { Canvas } from "@react-three/fiber";
 import type { ArchitectureObject } from "@siteforge/shared";
 import { Box, Layers, Ruler } from "lucide-react";
 import { Suspense } from "react";
+import type { LayerVisibility } from "./DataLayerPanel";
 
 interface SceneViewerProps {
   terrainUrl?: string;
   object: ArchitectureObject;
+  layers: LayerVisibility;
   onObjectChange: (object: ArchitectureObject) => void;
 }
 
-export function SceneViewer({ terrainUrl, object, onObjectChange }: SceneViewerProps) {
+export function SceneViewer({ terrainUrl, object, layers, onObjectChange }: SceneViewerProps) {
   return (
     <section className="scene-panel" aria-label="3D terrain scene">
       <div className="panel-heading">
@@ -36,10 +38,14 @@ export function SceneViewer({ terrainUrl, object, onObjectChange }: SceneViewerP
           <ambientLight intensity={0.7} />
           <directionalLight position={[28, 50, 22]} intensity={1.8} castShadow />
           <Suspense fallback={<PlaceholderTerrain />}>
-            {terrainUrl ? <TerrainModel url={terrainUrl} /> : <PlaceholderTerrain />}
+            {layers.terrain ? terrainUrl ? <TerrainModel url={terrainUrl} /> : <PlaceholderTerrain /> : null}
           </Suspense>
-          <PlanningVolume object={object} />
-          <Grid args={[120, 24]} position={[0, 0.03, 0]} cellColor="#769177" sectionColor="#17211f" />
+          {layers.imagery ? <FlatImageryFallback /> : null}
+          {layers.surface ? <SurfaceLayer /> : null}
+          {layers.planning ? <PlanningVolume object={object} /> : null}
+          {layers.grid ? (
+            <Grid args={[120, 24]} position={[0, 0.03, 0]} cellColor="#769177" sectionColor="#17211f" />
+          ) : null}
           <Environment preset="city" />
           <OrbitControls makeDefault />
         </Canvas>
@@ -89,6 +95,24 @@ export function SceneViewer({ terrainUrl, object, onObjectChange }: SceneViewerP
         </label>
       </div>
     </section>
+  );
+}
+
+function FlatImageryFallback() {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
+      <planeGeometry args={[100, 100, 1, 1]} />
+      <meshStandardMaterial color="#637a50" roughness={0.95} transparent opacity={0.38} />
+    </mesh>
+  );
+}
+
+function SurfaceLayer() {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 3.1, 0]}>
+      <planeGeometry args={[84, 84, 10, 10]} />
+      <meshStandardMaterial color="#7ca8b6" wireframe transparent opacity={0.35} />
+    </mesh>
   );
 }
 
