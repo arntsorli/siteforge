@@ -5,6 +5,7 @@ import identityImage from "./assets/siteforge-terrain-identity.png";
 import { MapSelector } from "./components/MapSelector";
 import { ProjectDashboard } from "./components/ProjectDashboard";
 import { SceneViewer } from "./components/SceneViewer";
+import type { TerrainMode, TerrainSettings } from "./components/SceneViewer";
 import {
   DataLayerPanel,
   type LayerVisibility,
@@ -31,6 +32,12 @@ export default function App() {
   const [object, setObject] = useState<ArchitectureObject>(DEFAULT_OBJECT);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("overlay");
+  const [terrainMode, setTerrainMode] = useState<TerrainMode>("default");
+  const [terrainSettings, setTerrainSettings] = useState<TerrainSettings>({
+    relief: 5,
+    flatten: 0.15,
+    ridge: 2,
+  });
   const [layers, setLayers] = useState<LayerVisibility>({
     terrain: true,
     imagery: false,
@@ -55,6 +62,7 @@ export default function App() {
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
     setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setTerrainMode("default");
     setStatus("Blank project opened with a basic terrain canvas.");
   }
 
@@ -64,6 +72,7 @@ export default function App() {
     setArea(nextProject.areaGeometry);
     setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
     setMapViewMode("overlay");
+    setTerrainMode("default");
     setStatus("Fortenvegen project opened. Load map/elevation data when ready.");
   }
 
@@ -90,6 +99,7 @@ export default function App() {
     setArea(workingProject.areaGeometry);
     setObject(workingProject.objects[0] ?? DEFAULT_OBJECT);
     setMapViewMode("satellite");
+    setTerrainMode("flat");
     setLayers({ terrain: false, imagery: true, surface: false, planning: true, grid: true });
     setStatus("Using flat terrain with imagery overlay fallback while elevation/LiDAR data is unavailable.");
   }
@@ -116,6 +126,7 @@ export default function App() {
       const nextObject = response.project.objects[0] ?? object;
       setProject(response.project);
       setObject(nextObject);
+      setTerrainMode("generated");
       setStatus("Terrain generated. Review attribution and adjust the planning volume.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Terrain generation failed.");
@@ -251,7 +262,16 @@ export default function App() {
         </div>
 
         <div className="right-stack">
-          <SceneViewer terrainUrl={terrainUrl} object={object} layers={layers} onObjectChange={setObject} />
+          <SceneViewer
+            terrainUrl={terrainUrl}
+            object={object}
+            layers={layers}
+            terrainMode={terrainMode}
+            terrainSettings={terrainSettings}
+            onObjectChange={setObject}
+            onTerrainModeChange={setTerrainMode}
+            onTerrainSettingsChange={setTerrainSettings}
+          />
           <section className="project-panel">
             <div className="panel-heading">
               <div>

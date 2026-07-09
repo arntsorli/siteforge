@@ -25,22 +25,22 @@ Keep each milestone buildable before committing and pushing.
 
 ## Milestone 3 - Blank And Default Terrain Modes
 
-- [ ] Start blank by default, with a clear action to add a basic terrain model.
-- [ ] Allow swapping between generated terrain, default terrain, and flat fallback terrain.
-- [ ] Add simple terrain simulator controls for manual terrain shaping when data is unavailable.
+- [x] Start blank by default, with a clear action to add a basic terrain model.
+- [x] Allow swapping between generated terrain, default terrain, and flat fallback terrain.
+- [x] Add simple terrain simulator controls for manual terrain shaping when data is unavailable.
 
 ## Milestone 4 - SketchUp-Inspired 3D Planning Tools
 
-- [ ] Add smoother 3D editing controls for rough building volumes.
-- [ ] Add tool modes for select/orbit/pan/place-volume/terrain-adjust.
-- [ ] Improve object editing ergonomics without turning the MVP into a full CAD/GIS app.
+- [x] Add smoother 3D editing controls for rough building volumes.
+- [x] Add tool modes for select/orbit/pan/place-volume/terrain-adjust.
+- [x] Improve object editing ergonomics without turning the MVP into a full CAD/GIS app.
 
 ## Milestone 5 - Camera And Orbit Feel
 
-- [ ] Increase camera damping and smoothness.
-- [ ] Use left-click drag to orbit, right-click drag to pan, and wheel to zoom.
-- [ ] Update the orbit point when orbiting, panning, left-clicking, right-clicking, or zooming.
-- [ ] Show the orbit point as a small 80% opacity sphere with an HTML label that fades away.
+- [x] Increase camera damping and smoothness.
+- [x] Use left-click drag to orbit, right-click drag to pan, and wheel to zoom.
+- [x] Update the orbit point when orbiting, panning, left-clicking, right-clicking, or zooming.
+- [x] Show the orbit point as a small 80% opacity sphere with an HTML label that fades away.
 
 ## Milestone 6 - Backend Data Sources
 
