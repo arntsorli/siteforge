@@ -44,7 +44,7 @@ Keep each milestone buildable before committing and pushing.
 
 ## Milestone 6 - Backend Data Sources
 
-- [ ] Harden the Høydedata DTM1 provider around Fortenvegen.
-- [ ] Add provider placeholders/adapters for LiDAR/surface and satellite/orthophoto data.
-- [ ] Add API responses that distinguish live data, cached data, and fallback data.
-- [ ] Add tests for provider status and fallback metadata.
+- [x] Harden the Høydedata DTM1 provider around Fortenvegen.
+- [x] Add provider placeholders/adapters for LiDAR/surface and satellite/orthophoto data.
+- [x] Add API responses that distinguish live data, cached data, and fallback data.
+- [x] Add tests for provider status and fallback metadata.

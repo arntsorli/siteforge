@@ -116,6 +116,29 @@ class ProviderInfo(BaseModel):
     live: bool
 
 
+class DataSourceStatus(BaseModel):
+    id: str
+    kind: Literal["map", "dtm", "surface", "imagery", "pointCloud"]
+    label: str
+    provider: str
+    status: Literal["live", "cached", "fallback", "planned", "unavailable"]
+    sourceUrl: str
+    licenseName: str
+    licenseUrl: str
+    attribution: str
+    crs: str | None = None
+    resolutionMeters: float | None = None
+    note: str
+
+
+class AreaDataStatus(BaseModel):
+    id: str
+    label: str
+    area: AreaGeometry
+    sources: list[DataSourceStatus]
+    warnings: list[str]
+
+
 class ProjectSaveRequest(BaseModel):
     project: SiteForgeProject
 
@@ -126,4 +149,3 @@ class ExportRequest(BaseModel):
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat()
-
