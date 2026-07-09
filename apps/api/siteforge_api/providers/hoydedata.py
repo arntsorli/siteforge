@@ -11,7 +11,6 @@ from siteforge_api.providers.base import ResolvedTile, TerrainProvider, TileRef
 from siteforge_api.schemas import DataSource, ProviderInfo
 from siteforge_api.settings import Settings
 
-
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom", "georss": "http://www.georss.org/georss"}
 DTM1_FEED_URL = "https://nedlasting.geonorge.no/geonorge/ATOM/hoydedata/datasett/DTM1.atom"
 NLOD_URL = "https://data.norge.no/nlod/no/2.0/"
@@ -62,7 +61,8 @@ class HoydedataDtm1Provider(TerrainProvider):
             crs = "EPSG:25833"
             category = entry.find("atom:category", ATOM_NS)
             if category is not None and category.attrib.get("label"):
-                crs = "EPSG:25833" if "25833" in category.attrib.get("term", "") else category.attrib["label"]
+                term = category.attrib.get("term", "")
+                crs = "EPSG:25833" if "25833" in term else category.attrib["label"]
 
             tiles.append(
                 TileRef(

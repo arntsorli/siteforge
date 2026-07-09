@@ -1,6 +1,6 @@
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
-from contextlib import contextmanager
 
 import numpy as np
 import rasterio
@@ -11,8 +11,8 @@ from shapely.geometry import mapping
 
 from siteforge_api.providers.base import TerrainProvider
 from siteforge_api.schemas import (
-    AreaGeometry,
     ArchitectureObject,
+    AreaGeometry,
     DataSource,
     ExportRecord,
     LocalOrigin,
@@ -27,7 +27,6 @@ from siteforge_api.services.geometry import (
     WGS84,
     area_to_shape,
     bbox_tuple,
-    coordinates_from_bounds,
     reproject_shape,
     validate_area_size,
 )
@@ -89,7 +88,8 @@ async def generate_terrain_project(
                 resolutionMeters=mesh_result.resolution_meters,
                 crs=NORWAY_PROJECTED,
                 accuracyWarning=(
-                    "Live terrain generation failed, so this scene uses synthetic fallback terrain. "
+                    "Live terrain generation failed, so this scene uses synthetic "
+                    "fallback terrain. "
                     f"Original error: {exc}"
                 ),
             )

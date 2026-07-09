@@ -22,7 +22,9 @@ def area_to_shape(area: AreaGeometry) -> BaseGeometry:
         shape = box(area.west, area.south, area.east, area.north)
     elif isinstance(area, PolygonGeometry):
         if not area.coordinates or len(area.coordinates[0]) < 4:
-            raise GeometryError("Polygon requires a closed outer ring with at least four positions.")
+            raise GeometryError(
+                "Polygon requires a closed outer ring with at least four positions."
+            )
         shape = Polygon(area.coordinates[0], area.coordinates[1:])
     else:
         raise GeometryError("Unsupported area geometry.")

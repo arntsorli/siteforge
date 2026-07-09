@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,9 +38,14 @@ app.add_middleware(
 )
 app.mount("/artifacts", StaticFiles(directory=Path(settings.projects_dir)), name="artifacts")
 
+SettingsDep = Annotated[Settings, Depends(get_settings)]
 
-def get_provider(settings: Settings = Depends(get_settings)) -> HoydedataDtm1Provider:
+
+def get_provider(settings: SettingsDep) -> HoydedataDtm1Provider:
     return HoydedataDtm1Provider(settings)
+
+
+ProviderDep = Annotated[HoydedataDtm1Provider, Depends(get_provider)]
 
 
 @app.get("/health")
@@ -48,15 +54,15 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/providers", response_model=list[ProviderInfo])
-async def providers(provider: HoydedataDtm1Provider = Depends(get_provider)) -> list[ProviderInfo]:
+async def providers(provider: ProviderDep) -> list[ProviderInfo]:
     return [provider.info()]
 
 
 @app.post("/terrain/jobs", response_model=TerrainJobResponse)
 async def create_terrain_job(
     request: TerrainJobRequest,
-    provider: HoydedataDtm1Provider = Depends(get_provider),
-    settings: Settings = Depends(get_settings),
+    provider: ProviderDep,
+    settings: SettingsDep,
 ) -> TerrainJobResponse:
     try:
         return await generate_terrain_project(
@@ -72,7 +78,10 @@ async def create_terrain_job(
 
 
 @app.get("/projects/{project_id}", response_model=SiteForgeProject)
-async def get_project(project_id: str, settings: Settings = Depends(get_settings)) -> SiteForgeProject:
+async def get_project(
+    project_id: str,
+    settings: SettingsDep,
+) -> SiteForgeProject:
     try:
         return load_project(project_id, settings)
     except FileNotFoundError as exc:
@@ -83,7 +92,7 @@ async def get_project(project_id: str, settings: Settings = Depends(get_settings
 async def put_project(
     project_id: str,
     request: ProjectSaveRequest,
-    settings: Settings = Depends(get_settings),
+    settings: SettingsDep,
 ) -> SiteForgeProject:
     if project_id != request.project.id:
         raise HTTPException(status_code=400, detail="Project id does not match request body.")
@@ -93,7 +102,6 @@ async def put_project(
 @app.post("/exports/glb", response_model=SiteForgeProject)
 async def export_glb(
     request: ExportRequest,
-    settings: Settings = Depends(get_settings),
+    settings: SettingsDep,
 ) -> SiteForgeProject:
     return export_project_glb(request.project, settings)
-

@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import trimesh
 
@@ -47,7 +46,9 @@ def export_project_glb(project: SiteForgeProject, settings: Settings) -> SiteFor
         includedObjects=[obj.id for obj in project.objects],
         sourceMetadata=project.dataSources,
     )
-    updated = project.model_copy(update={"exports": [*project.exports, record], "updatedAt": utc_now()})
+    updated = project.model_copy(
+        update={"exports": [*project.exports, record], "updatedAt": utc_now()}
+    )
     return save_project(updated, settings)
 
 
@@ -56,4 +57,3 @@ def _hex_to_rgba(value: str) -> tuple[int, int, int, int]:
     if len(color) != 6:
         return (215, 137, 74, 255)
     return (int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16), 255)
-
