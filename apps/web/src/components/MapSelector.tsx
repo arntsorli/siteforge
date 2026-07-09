@@ -1,6 +1,6 @@
 import type { AreaGeometry, Position } from "@siteforge/shared";
 import type { FeatureCollection, Polygon } from "geojson";
-import { BoxSelect, Home, LocateFixed, RotateCcw } from "lucide-react";
+import { BoxSelect, Check, Home, LocateFixed, RotateCcw } from "lucide-react";
 import maplibregl, { type GeoJSONSource, type Map } from "maplibre-gl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapViewMode } from "./DataLayerPanel";
@@ -23,7 +23,12 @@ const OSLO_TEST_AREA: AreaGeometry = {
 export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenvegen }: MapSelectorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
+  const pointsRef = useRef<Position[]>([]);
   const [points, setPoints] = useState<Position[]>([]);
+
+  useEffect(() => {
+    pointsRef.current = points;
+  }, [points]);
 
   const polygonFeature = useMemo(() => {
     const area = points.length >= 3 ? pointsToPolygon(points) : selectedAreaToPolygon(selectedArea);
@@ -72,17 +77,10 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-right");
+    map.doubleClickZoom.disable();
     map.on("click", (event) => {
       const next: Position = [event.lngLat.lng, event.lngLat.lat];
       setPoints((current) => [...current, next]);
-    });
-    map.on("dblclick", (event) => {
-      event.preventDefault();
-      setPoints((current) => {
-        if (current.length < 3) return current;
-        onAreaChange({ type: "Polygon", coordinates: [[...current, current[0]]] });
-        return [];
-      });
     });
     mapRef.current = map;
 
@@ -162,6 +160,17 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
     setPoints([]);
   }
 
+  function finishPolygon() {
+    const current = pointsRef.current;
+    if (current.length < 3) return;
+    onAreaChange({ type: "Polygon", coordinates: [[...current, current[0]]] });
+    setPoints([]);
+  }
+
+  function clearPoints() {
+    setPoints([]);
+  }
+
   return (
     <section className="map-panel" aria-label="Map area selection">
       <div className="panel-heading">
@@ -179,14 +188,17 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
           <button type="button" onClick={useVisibleBounds} title="Use visible map bounds">
             <BoxSelect size={18} />
           </button>
-          <button type="button" onClick={() => setPoints([])} title="Clear in-progress polygon">
+          <button type="button" onClick={finishPolygon} disabled={points.length < 3} title="Finish clicked polygon">
+            <Check size={18} />
+          </button>
+          <button type="button" onClick={clearPoints} title="Clear in-progress polygon">
             <RotateCcw size={18} />
           </button>
         </div>
       </div>
       <div ref={containerRef} className="map-canvas" />
       <p className="fineprint">
-        Click to place polygon points; double-click to use the polygon. Use a small area for the MVP terrain job.
+        Click to place polygon points, then press the check button to use the polygon. Current points: {points.length}.
       </p>
     </section>
   );

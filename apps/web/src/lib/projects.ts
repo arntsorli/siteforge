@@ -51,9 +51,10 @@ export const DEFAULT_OBJECT: ArchitectureObject = {
 export function createLocalProject(
   name: string,
   area: AreaGeometry,
-  objects: ArchitectureObject[] = [DEFAULT_OBJECT],
+  objects?: ArchitectureObject[],
 ): SiteForgeProject {
   const now = new Date().toISOString();
+  const projectObjects = objects ?? [starterObjectForArea(area)];
   return {
     id: `local-${crypto.randomUUID()}`,
     name,
@@ -69,12 +70,46 @@ export function createLocalProject(
     },
     layers: [],
     dataSources: [],
-    objects,
+    objects: projectObjects,
     exports: [],
     warnings: [
       "Rough planning only. SiteForge output is not surveying, engineering documentation, or construction-ready geometry.",
       "Fortenvegen preset is based on OpenStreetMap/Nominatim address geocoding and should be checked before detailed planning.",
     ],
+  };
+}
+
+function starterObjectForArea(area: AreaGeometry): ArchitectureObject {
+  const center = areaCenter(area);
+  const width = 12;
+  const depth = 8;
+  const corners = [
+    localToPosition(center, -width / 2, -depth / 2),
+    localToPosition(center, width / 2, -depth / 2),
+    localToPosition(center, width / 2, depth / 2),
+    localToPosition(center, -width / 2, depth / 2),
+  ];
+  return {
+    ...DEFAULT_OBJECT,
+    id: `object-initial-${crypto.randomUUID()}`,
+    footprint: { type: "Polygon", coordinates: [[...corners, corners[0]]] },
+  };
+}
+
+function localToPosition(center: { lon: number; lat: number }, x: number, z: number): [number, number] {
+  const metersPerLon = Math.max(1, 111_320 * Math.cos((center.lat * Math.PI) / 180));
+  return [center.lon + x / metersPerLon, center.lat - z / 111_320];
+}
+
+function areaCenter(area: AreaGeometry) {
+  if (area.type === "BBox") {
+    return { lon: (area.west + area.east) / 2, lat: (area.south + area.north) / 2 };
+  }
+  const outer = area.coordinates[0] ?? [];
+  const count = Math.max(1, outer.length);
+  return {
+    lon: outer.reduce((sum, point) => sum + point[0], 0) / count,
+    lat: outer.reduce((sum, point) => sum + point[1], 0) / count,
   };
 }
 

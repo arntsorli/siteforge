@@ -1,5 +1,4 @@
-import { Layers, Map, Mountain, Satellite, ScanLine } from "lucide-react";
-import { useState } from "react";
+import { Eye, Layers, Map, Mountain, Satellite, ScanLine } from "lucide-react";
 
 export type MapViewMode = "map" | "satellite" | "overlay";
 
@@ -21,35 +20,6 @@ interface DataLayerPanelProps {
   hasGeneratedTerrain: boolean;
 }
 
-const SOURCE_CARDS = [
-  {
-    icon: Map,
-    name: "Map",
-    status: "Loaded",
-    detail: "OpenStreetMap base context",
-  },
-  {
-    icon: Mountain,
-    name: "Height / DTM",
-    status: "Ready",
-    detail: "Høydedata DTM1 terrain request",
-  },
-  {
-    icon: ScanLine,
-    name: "LiDAR / surface",
-    status: "Planned",
-    detail: "Future DOM/point-cloud layer",
-  },
-  {
-    icon: Satellite,
-    name: "Satellite",
-    status: "Fallback",
-    detail: "Imagery overlay for flat terrain",
-  },
-];
-
-type SourceName = (typeof SOURCE_CARDS)[number]["name"];
-
 export function DataLayerPanel({
   mapViewMode,
   layers,
@@ -59,81 +29,93 @@ export function DataLayerPanel({
   onUseFlatFallback,
   hasGeneratedTerrain,
 }: DataLayerPanelProps) {
-  const [selectedSource, setSelectedSource] = useState<SourceName>("Height / DTM");
-  const currentSource = SOURCE_CARDS.find((source) => source.name === selectedSource) ?? SOURCE_CARDS[1];
-  const CurrentIcon = currentSource.icon;
-
   return (
     <section className="data-panel compact-data-panel" aria-label="Data and layer controls">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Configure layer</p>
-          <h2>{currentSource.name}</h2>
+          <p className="eyebrow">Terrain / data</p>
+          <h2>Build the base canvas</h2>
         </div>
         <Layers size={22} />
       </div>
 
-      <div className="source-tabs" aria-label="Choose data layer">
-        {SOURCE_CARDS.map((source) => {
-          const Icon = source.icon;
-          return (
-            <button
-              key={source.name}
-              type="button"
-              className={selectedSource === source.name ? "active" : ""}
-              onClick={() => setSelectedSource(source.name)}
-              title={source.name}
-            >
-              <Icon size={18} />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="selected-source-card">
-        <CurrentIcon size={22} />
-        <div>
-          <strong>{currentSource.detail}</strong>
-          <span>{currentSource.status}</span>
+      <section className="data-config-section">
+        <div className="data-section-title">
+          <Map size={18} />
+          <strong>Preview map</strong>
         </div>
-      </div>
+        <div className="segmented-control" aria-label="Map view mode">
+          {(["map", "satellite", "overlay"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={mapViewMode === mode ? "active" : ""}
+              onClick={() => onMapViewModeChange(mode)}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <div className="segmented-control" aria-label="Map view mode">
-        {(["map", "satellite", "overlay"] as const).map((mode) => (
-          <button
-            key={mode}
-            type="button"
-            className={mapViewMode === mode ? "active" : ""}
-            onClick={() => onMapViewModeChange(mode)}
-          >
-            {mode}
+      <section className="data-config-section">
+        <div className="data-section-title">
+          <Mountain size={18} />
+          <strong>Height data</strong>
+        </div>
+        <p className="fineprint no-margin">Use Høydedata DTM when available, or continue with editable custom terrain.</p>
+        <div className="data-actions">
+          <button type="button" onClick={onLoadFortenvegenData}>
+            <Map size={18} /> Fortenvegen preset
           </button>
-        ))}
-      </div>
+          <button type="button" onClick={onUseFlatFallback} disabled={hasGeneratedTerrain}>
+            <Mountain size={18} /> Custom fallback
+          </button>
+        </div>
+      </section>
 
-      <div className="layer-toggle-grid data-layer-toggles">
-        {Object.entries(layers).map(([key, value]) => (
-          <label key={key}>
-            <input
-              type="checkbox"
-              checked={value}
-              onChange={(event) =>
-                onLayerChange({ ...layers, [key]: event.currentTarget.checked })
-              }
-            />
-            <span>{key}</span>
-          </label>
-        ))}
-      </div>
+      <section className="data-config-section">
+        <div className="data-section-title">
+          <Satellite size={18} />
+          <strong>Satellite drape</strong>
+        </div>
+        <label className="switch-row">
+          <span>Use satellite imagery as terrain mask</span>
+          <input
+            type="checkbox"
+            checked={layers.imagery}
+            onChange={(event) => onLayerChange({ ...layers, imagery: event.currentTarget.checked })}
+          />
+        </label>
+        <p className="fineprint no-margin">The 3D canvas will drape the imagery layer over custom terrain.</p>
+      </section>
 
-      <div className="data-actions">
-        <button type="button" onClick={onLoadFortenvegenData}>
-          <Map size={18} /> Load preset
-        </button>
-        <button type="button" onClick={onUseFlatFallback} disabled={hasGeneratedTerrain}>
-          <Satellite size={18} /> Use fallback
-        </button>
-      </div>
+      <section className="data-config-section">
+        <div className="data-section-title">
+          <Eye size={18} />
+          <strong>3D layers</strong>
+        </div>
+        <div className="layer-toggle-grid data-layer-toggles">
+          {(["terrain", "surface", "planning", "grid"] as const).map((key) => (
+            <label key={key}>
+              <span>{key}</span>
+              <input
+                type="checkbox"
+                checked={layers[key]}
+                onChange={(event) => onLayerChange({ ...layers, [key]: event.currentTarget.checked })}
+              />
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="data-config-section muted-section">
+        <div className="data-section-title">
+          <ScanLine size={18} />
+          <strong>LiDAR / surface</strong>
+        </div>
+        <p className="fineprint no-margin">Surface/LiDAR is still a placeholder layer until the provider pipeline matures.</p>
+      </section>
     </section>
   );
 }

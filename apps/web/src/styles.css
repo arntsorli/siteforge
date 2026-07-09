@@ -85,6 +85,10 @@ h2 {
   margin-top: 8px;
 }
 
+.no-margin {
+  margin: 0;
+}
+
 .home-shell {
   min-height: 100vh;
   display: grid;
@@ -402,6 +406,41 @@ button.project-card {
   gap: 10px;
 }
 
+.data-config-section {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf6;
+}
+
+.muted-section {
+  background: #f6f3ea;
+}
+
+.data-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.switch-row input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
 .source-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -682,6 +721,25 @@ button.project-card {
 .floating-editor input,
 .floating-editor select {
   width: 100%;
+}
+
+.editor-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editor-title-row div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.editor-title-row button {
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
 }
 
 .orbit-label {

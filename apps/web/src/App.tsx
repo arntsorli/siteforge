@@ -33,7 +33,8 @@ export default function App() {
   const [project, setProject] = useState<SiteForgeProject | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>("terrain");
-  const [object, setObject] = useState<ArchitectureObject>(DEFAULT_OBJECT);
+  const [objects, setObjects] = useState<ArchitectureObject[]>([DEFAULT_OBJECT]);
+  const [selectedObjectId, setSelectedObjectId] = useState(DEFAULT_OBJECT.id);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("overlay");
   const [terrainMode, setTerrainMode] = useState<TerrainMode>("custom");
@@ -65,7 +66,8 @@ export default function App() {
     const nextProject = createLocalProject("Blank SiteForge project", OSLO_SAMPLE_AREA);
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
-    setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setObjects(nextProject.objects.length ? nextProject.objects : [DEFAULT_OBJECT]);
+    setSelectedObjectId((nextProject.objects[0] ?? DEFAULT_OBJECT).id);
     setTerrainMode("custom");
     setWorkflowStep("terrain");
     setView("workspace");
@@ -76,7 +78,8 @@ export default function App() {
     const nextProject = createLocalProject("Fortenvegen 100, Gran", FORTENVEGEN_AREA);
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
-    setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setObjects(nextProject.objects.length ? nextProject.objects : [DEFAULT_OBJECT]);
+    setSelectedObjectId((nextProject.objects[0] ?? DEFAULT_OBJECT).id);
     setMapViewMode("overlay");
     setTerrainMode("custom");
     setWorkflowStep("terrain");
@@ -105,7 +108,8 @@ export default function App() {
     const workingProject = project ?? createLocalProject("Flat imagery fallback project", FORTENVEGEN_AREA);
     setProject(workingProject);
     setArea(workingProject.areaGeometry);
-    setObject(workingProject.objects[0] ?? DEFAULT_OBJECT);
+    setObjects(workingProject.objects.length ? workingProject.objects : [DEFAULT_OBJECT]);
+    setSelectedObjectId((workingProject.objects[0] ?? DEFAULT_OBJECT).id);
     setMapViewMode("satellite");
     setTerrainMode("custom");
     setLayers({ terrain: true, imagery: true, surface: false, planning: true, grid: true });
@@ -117,7 +121,8 @@ export default function App() {
   function openProject(nextProject: SiteForgeProject) {
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
-    setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setObjects(nextProject.objects.length ? nextProject.objects : [DEFAULT_OBJECT]);
+    setSelectedObjectId((nextProject.objects[0] ?? DEFAULT_OBJECT).id);
     setWorkflowStep("terrain");
     setView("workspace");
     setStatus(`Opened ${nextProject.name}.`);
@@ -135,9 +140,10 @@ export default function App() {
     setStatus("Resolving Hoydedata DTM1 tiles and generating terrain...");
     try {
       const response = await createTerrainJob(area);
-      const nextObject = response.project.objects[0] ?? object;
+      const nextObjects = response.project.objects.length ? response.project.objects : objects;
       setProject(response.project);
-      setObject(nextObject);
+      setObjects(nextObjects);
+      setSelectedObjectId((nextObjects[0] ?? DEFAULT_OBJECT).id);
       setTerrainMode("generated");
       setWorkflowStep("planning");
       setStatus("Terrain generated. Review attribution and adjust the planning volume.");
@@ -161,7 +167,7 @@ export default function App() {
     if (!project) return;
     setBusy(true);
     try {
-      const localProject = { ...project, areaGeometry: area, objects: [object], updatedAt: new Date().toISOString() };
+      const localProject = { ...project, areaGeometry: area, objects, updatedAt: new Date().toISOString() };
       let saved = localProject;
       if (!project.id.startsWith("local-")) {
         saved = await saveProject(localProject);
@@ -188,7 +194,7 @@ export default function App() {
     if (!project) return;
     setBusy(true);
     try {
-      const exported = await exportGlb({ ...project, objects: [object] });
+      const exported = await exportGlb({ ...project, objects });
       setProject(exported);
       setWorkflowStep("export");
       setStatus("GLB export generated with terrain and planning objects.");
@@ -200,12 +206,12 @@ export default function App() {
         artifactUri: "browser-local://project.json",
         generatedAt: now,
         includedLayers: project.layers.map((layer) => layer.id),
-        includedObjects: [object.id],
+        includedObjects: objects.map((item) => item.id),
         sourceMetadata: project.dataSources,
       };
       const localProject = {
         ...project,
-        objects: [object],
+        objects,
         exports: [...project.exports, localJsonExport],
         updatedAt: now,
       };
@@ -309,7 +315,12 @@ export default function App() {
             />
           </main>
           <aside className="layer-config-rail">
-            <SiteContextPanel project={project} area={area} onProjectNameChange={renameProject} />
+            <SiteContextPanel
+              project={project}
+              area={area}
+              objectCount={objects.length}
+              onProjectNameChange={renameProject}
+            />
             <DataLayerPanel
               mapViewMode={mapViewMode}
               layers={layers}
@@ -330,12 +341,15 @@ export default function App() {
         <section className="canvas-workspace">
           <main className="full-scene-surface">
             <SceneViewer
+              area={area}
               terrainUrl={terrainUrl}
-              object={object}
+              objects={objects}
+              selectedObjectId={selectedObjectId}
               layers={layers}
               terrainMode={terrainMode}
               terrainSettings={terrainSettings}
-              onObjectChange={setObject}
+              onObjectsChange={setObjects}
+              onSelectedObjectChange={setSelectedObjectId}
               onTerrainModeChange={setTerrainMode}
               onTerrainSettingsChange={setTerrainSettings}
               onLayerChange={setLayers}
@@ -347,10 +361,15 @@ export default function App() {
       {workflowStep === "review" ? (
         <section className="review-workspace">
           <aside className="review-side">
-            <SiteContextPanel project={project} area={area} onProjectNameChange={renameProject} />
+            <SiteContextPanel
+              project={project}
+              area={area}
+              objectCount={objects.length}
+              onProjectNameChange={renameProject}
+            />
           </aside>
           <main className="review-main">
-            <ProjectMetadataPanel project={project} large />
+            <ProjectMetadataPanel project={project} objectCount={objects.length} large />
           </main>
         </section>
       ) : null}
@@ -358,7 +377,7 @@ export default function App() {
       {workflowStep === "export" ? (
         <section className="export-workspace">
           <main className="export-main">
-            <ExportPanel project={project} busy={busy} onSave={handleSave} onExport={handleExport} />
+            <ExportPanel project={project} objectCount={objects.length} busy={busy} onSave={handleSave} onExport={handleExport} />
           </main>
         </section>
       ) : null}
@@ -403,10 +422,12 @@ function WorkflowTabs({
 function SiteContextPanel({
   project,
   area,
+  objectCount,
   onProjectNameChange,
 }: {
   project: SiteForgeProject | null;
   area: AreaGeometry;
+  objectCount: number;
   onProjectNameChange: (name: string) => void;
 }) {
   return (
@@ -430,13 +451,21 @@ function SiteContextPanel({
       <div className="metadata-grid single-column">
         <Info label="Area" value={locationLabel(area)} />
         <Info label="CRS target" value={project?.crs ?? "EPSG:25833"} />
-        <Info label="Objects" value={String(project?.objects.length ?? 0)} />
+        <Info label="Objects" value={String(objectCount)} />
       </div>
     </section>
   );
 }
 
-function ProjectMetadataPanel({ project, large = false }: { project: SiteForgeProject | null; large?: boolean }) {
+function ProjectMetadataPanel({
+  project,
+  objectCount,
+  large = false,
+}: {
+  project: SiteForgeProject | null;
+  objectCount: number;
+  large?: boolean;
+}) {
   return (
     <section className={large ? "project-panel review-panel" : "project-panel"}>
       <div className="panel-heading">
@@ -449,6 +478,7 @@ function ProjectMetadataPanel({ project, large = false }: { project: SiteForgePr
       <div className="metadata-grid single-column">
         <Info label="CRS" value={project?.crs ?? "EPSG:25833 target"} />
         <Info label="Layers" value={String(project?.layers.length ?? 0)} />
+        <Info label="Objects" value={String(objectCount)} />
         <Info label="Exports" value={String(project?.exports.length ?? 0)} />
       </div>
       <div className="source-list">
@@ -478,11 +508,13 @@ function ProjectMetadataPanel({ project, large = false }: { project: SiteForgePr
 
 function ExportPanel({
   project,
+  objectCount,
   busy,
   onSave,
   onExport,
 }: {
   project: SiteForgeProject | null;
+  objectCount: number;
   busy: boolean;
   onSave: () => void;
   onExport: () => void;
@@ -506,7 +538,7 @@ function ExportPanel({
       </div>
       <div className="export-summary">
         <Info label="Project" value={project?.name ?? "No project opened"} />
-        <Info label="Included objects" value={String(project?.objects.length ?? 0)} />
+        <Info label="Included objects" value={String(objectCount)} />
         <Info label="Generated exports" value={String(project?.exports.length ?? 0)} />
       </div>
       <p className="fineprint">
