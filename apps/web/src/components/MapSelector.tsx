@@ -101,6 +101,19 @@ export function MapSelector({ selectedArea, onAreaChange }: MapSelectorProps) {
     source?.setData(polygonFeature);
   }, [polygonFeature]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const bounds = areaBounds(selectedArea);
+    map.fitBounds(
+      [
+        [bounds.west, bounds.south],
+        [bounds.east, bounds.north],
+      ],
+      { padding: 80, maxZoom: 18, duration: 700 },
+    );
+  }, [selectedArea]);
+
   function useVisibleBounds() {
     const bounds = mapRef.current?.getBounds();
     if (!bounds) return;
@@ -158,5 +171,18 @@ function selectedAreaToPolygon(area: AreaGeometry): Polygon {
         [area.west, area.south],
       ],
     ],
+  };
+}
+
+function areaBounds(area: AreaGeometry) {
+  if (area.type === "BBox") return area;
+  const outer = area.coordinates[0] ?? [];
+  const lons = outer.map((position) => position[0]);
+  const lats = outer.map((position) => position[1]);
+  return {
+    west: Math.min(...lons),
+    south: Math.min(...lats),
+    east: Math.max(...lons),
+    north: Math.max(...lats),
   };
 }

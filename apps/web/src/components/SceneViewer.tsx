@@ -31,7 +31,7 @@ export function SceneViewer({ terrainUrl, object, onObjectChange }: SceneViewerP
         </div>
       </div>
       <div className="scene-canvas">
-        <Canvas camera={{ position: [55, 42, 58], fov: 46 }} shadows>
+        <Canvas camera={{ position: [55, 42, 58], fov: 46 }} gl={{ preserveDrawingBuffer: true }} shadows>
           <color attach="background" args={["#dce8df"]} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[28, 50, 22]} intensity={1.8} castShadow />
@@ -124,4 +124,3 @@ function PlaceholderTerrain() {
     </mesh>
   );
 }
-

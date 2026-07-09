@@ -1,55 +1,73 @@
 import type { ArchitectureObject, AreaGeometry, SiteForgeProject } from "@siteforge/shared";
-import { Download, FileJson, Hammer, Play, Save } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Download, FileJson, Hammer, Home, Play, Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import identityImage from "./assets/siteforge-terrain-identity.png";
 import { MapSelector } from "./components/MapSelector";
+import { ProjectDashboard } from "./components/ProjectDashboard";
 import { SceneViewer } from "./components/SceneViewer";
 import { artifactUrl, createTerrainJob, exportGlb, saveProject } from "./lib/api";
-
-const INITIAL_AREA: AreaGeometry = {
-  type: "BBox",
-  west: 10.7522,
-  south: 59.9135,
-  east: 10.754,
-  north: 59.9148,
-};
-
-const INITIAL_OBJECT: ArchitectureObject = {
-  id: "object-initial-building",
-  type: "building",
-  name: "Rough building volume",
-  footprint: {
-    type: "Polygon",
-    coordinates: [
-      [
-        [10.7528, 59.9139],
-        [10.7532, 59.9139],
-        [10.7532, 59.9142],
-        [10.7528, 59.9142],
-        [10.7528, 59.9139],
-      ],
-    ],
-  },
-  heightMeters: 4.5,
-  roofType: "gable",
-  roofPitchDegrees: 22,
-  materialColor: "#d7894a",
-  terrainSnapMode: "projected",
-};
+import {
+  captureScenePreview,
+  createLocalProject,
+  DEFAULT_OBJECT,
+  deleteRecentProject,
+  fallbackPreview,
+  FORTENVEGEN_AREA,
+  loadRecentProjects,
+  locationLabel,
+  OSLO_SAMPLE_AREA,
+  saveRecentProject,
+  type RecentProject,
+} from "./lib/projects";
 
 export default function App() {
-  const [area, setArea] = useState<AreaGeometry>(INITIAL_AREA);
+  const [area, setArea] = useState<AreaGeometry>(FORTENVEGEN_AREA);
   const [project, setProject] = useState<SiteForgeProject | null>(null);
-  const [object, setObject] = useState<ArchitectureObject>(INITIAL_OBJECT);
-  const [status, setStatus] = useState("Ready for a small Norway terrain selection.");
+  const [object, setObject] = useState<ArchitectureObject>(DEFAULT_OBJECT);
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const [status, setStatus] = useState("Start blank, open a recent project, or focus Fortenvegen 100.");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setRecentProjects(loadRecentProjects());
+  }, []);
 
   const terrainUrl = useMemo(
     () => artifactUrl(project?.layers.find((layer) => layer.kind === "dtm")?.artifactUri),
     [project],
   );
 
+  function startBlankProject() {
+    const nextProject = createLocalProject("Blank SiteForge project", OSLO_SAMPLE_AREA);
+    setProject(nextProject);
+    setArea(nextProject.areaGeometry);
+    setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setStatus("Blank project opened with a basic terrain canvas.");
+  }
+
+  function startFortenvegenProject() {
+    const nextProject = createLocalProject("Fortenvegen 100, Gran", FORTENVEGEN_AREA);
+    setProject(nextProject);
+    setArea(nextProject.areaGeometry);
+    setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setStatus("Fortenvegen project opened. Load map/elevation data when ready.");
+  }
+
+  function openProject(nextProject: SiteForgeProject) {
+    setProject(nextProject);
+    setArea(nextProject.areaGeometry);
+    setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
+    setStatus(`Opened ${nextProject.name}.`);
+  }
+
+  function renameProject(name: string) {
+    if (!project) return;
+    setProject({ ...project, name, updatedAt: new Date().toISOString() });
+  }
+
   async function generateTerrain() {
+    const workingProject = project ?? createLocalProject("Generated terrain project", area);
+    if (!project) setProject(workingProject);
     setBusy(true);
     setStatus("Resolving Hoydedata DTM1 tiles and generating terrain...");
     try {
@@ -69,7 +87,20 @@ export default function App() {
     if (!project) return;
     setBusy(true);
     try {
-      const saved = await saveProject({ ...project, objects: [object] });
+      const localProject = { ...project, areaGeometry: area, objects: [object], updatedAt: new Date().toISOString() };
+      let saved = localProject;
+      if (!project.id.startsWith("local-")) {
+        saved = await saveProject(localProject);
+      }
+      const previewUri = captureScenePreview();
+      setRecentProjects(
+        saveRecentProject({
+          project: saved,
+          previewUri,
+          locationLabel: locationLabel(saved.areaGeometry),
+          savedAt: saved.updatedAt,
+        }),
+      );
       setProject(saved);
       setStatus("Project JSON saved.");
     } catch (error) {
@@ -93,6 +124,19 @@ export default function App() {
     }
   }
 
+  function deleteRecent(projectId: string) {
+    setRecentProjects(deleteRecentProject(projectId));
+    if (project?.id === projectId) {
+      setProject(null);
+      setStatus("Removed the active project from recents.");
+    }
+  }
+
+  function closeToDashboard() {
+    setProject(null);
+    setStatus("Back at the project dashboard.");
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -104,6 +148,9 @@ export default function App() {
           </div>
         </div>
         <div className="header-actions">
+          <button type="button" onClick={closeToDashboard}>
+            <Home size={18} /> Projects
+          </button>
           <button type="button" onClick={generateTerrain} disabled={busy}>
             <Play size={18} /> Generate terrain
           </button>
@@ -123,6 +170,14 @@ export default function App() {
         </div>
         <p>{status}</p>
       </section>
+
+      <ProjectDashboard
+        recentProjects={recentProjects}
+        onBlankProject={startBlankProject}
+        onFortenvegenProject={startFortenvegenProject}
+        onOpenProject={openProject}
+        onDeleteProject={deleteRecent}
+      />
 
       <div className="workspace-grid">
         <div className="left-stack">
@@ -151,7 +206,15 @@ export default function App() {
               <FileJson size={22} />
             </div>
             <div className="metadata-grid">
-              <Info label="Project" value={project?.name ?? "No generated project yet"} />
+              <div className="project-name-field">
+                <span>Project</span>
+                <input
+                  value={project?.name ?? ""}
+                  disabled={!project}
+                  placeholder="No project opened"
+                  onChange={(event) => renameProject(event.currentTarget.value)}
+                />
+              </div>
               <Info label="CRS" value={project?.crs ?? "EPSG:25833 target"} />
               <Info label="Layers" value={String(project?.layers.length ?? 0)} />
               <Info label="Exports" value={String(project?.exports.length ?? 0)} />
@@ -166,7 +229,16 @@ export default function App() {
                   </a>
                 </article>
               ))}
-              {!project ? <p className="fineprint">Generate terrain to populate source metadata.</p> : null}
+              {!project ? <p className="fineprint">Open a project, then save to create a recent card preview.</p> : null}
+              {project && project.dataSources.length === 0 ? (
+                <article>
+                  <strong>Local starter</strong>
+                  <span>Blank/default terrain placeholder</span>
+                  <a href={fallbackPreview()} target="_blank" rel="noreferrer">
+                    Preview
+                  </a>
+                </article>
+              ) : null}
             </div>
             <div className="warning-row">
               <Hammer size={18} />
@@ -187,4 +259,3 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

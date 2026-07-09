@@ -9,11 +9,11 @@ Keep each milestone buildable before committing and pushing.
 
 ## Milestone 1 - Project Setup, Recent Projects, Save/Load
 
-- [ ] Add a start/dashboard view with blank-project and Fortenvegen starter actions.
-- [ ] Persist projects locally in the browser so the app works before the backend project list exists.
-- [ ] Save, load, rename, and open recent projects.
-- [ ] Capture a screenshot/preview image for each project card.
-- [ ] Keep project cards compact: preview, name, updated time, location/data status, open action.
+- [x] Add a start/dashboard view with blank-project and Fortenvegen starter actions.
+- [x] Persist projects locally in the browser so the app works before the backend project list exists.
+- [x] Save, load, rename, and open recent projects.
+- [x] Capture a screenshot/preview image for each project card.
+- [x] Keep project cards compact: preview, name, updated time, location/data status, open action.
 
 ## Milestone 2 - Fortenvegen Data Workflow And Layer Views
 
@@ -48,4 +48,3 @@ Keep each milestone buildable before committing and pushing.
 - [ ] Add provider placeholders/adapters for LiDAR/surface and satellite/orthophoto data.
 - [ ] Add API responses that distinguish live data, cached data, and fallback data.
 - [ ] Add tests for provider status and fallback metadata.
-
