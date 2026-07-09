@@ -1,7 +1,6 @@
-import type { ArchitectureObject, AreaGeometry, SiteForgeProject } from "@siteforge/shared";
-import { Box, Download, FileJson, Hammer, Home, Layers, Map, Play, Save, Upload } from "lucide-react";
+import type { ArchitectureObject, AreaGeometry, ExportRecord, SiteForgeProject } from "@siteforge/shared";
+import { Box, Download, FileJson, Home, Map, Play, Save, Upload } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import identityImage from "./assets/siteforge-terrain-identity.png";
 import { MapSelector } from "./components/MapSelector";
 import { ProjectDashboard } from "./components/ProjectDashboard";
 import { SceneViewer } from "./components/SceneViewer";
@@ -37,7 +36,7 @@ export default function App() {
   const [object, setObject] = useState<ArchitectureObject>(DEFAULT_OBJECT);
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
   const [mapViewMode, setMapViewMode] = useState<MapViewMode>("overlay");
-  const [terrainMode, setTerrainMode] = useState<TerrainMode>("default");
+  const [terrainMode, setTerrainMode] = useState<TerrainMode>("custom");
   const [terrainSettings, setTerrainSettings] = useState<TerrainSettings>({
     relief: 5,
     flatten: 0.15,
@@ -50,7 +49,7 @@ export default function App() {
     planning: true,
     grid: true,
   });
-  const [status, setStatus] = useState("Start blank, open a recent project, or focus Fortenvegen 100.");
+  const [status, setStatus] = useState("Choose a project to begin.");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -67,7 +66,7 @@ export default function App() {
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
     setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
-    setTerrainMode("default");
+    setTerrainMode("custom");
     setWorkflowStep("terrain");
     setView("workspace");
     setStatus("Blank project opened with a basic terrain canvas.");
@@ -79,7 +78,7 @@ export default function App() {
     setArea(nextProject.areaGeometry);
     setObject(nextProject.objects[0] ?? DEFAULT_OBJECT);
     setMapViewMode("overlay");
-    setTerrainMode("default");
+    setTerrainMode("custom");
     setWorkflowStep("terrain");
     setView("workspace");
     setStatus("Fortenvegen project opened. Load map/elevation data when ready.");
@@ -108,8 +107,8 @@ export default function App() {
     setArea(workingProject.areaGeometry);
     setObject(workingProject.objects[0] ?? DEFAULT_OBJECT);
     setMapViewMode("satellite");
-    setTerrainMode("flat");
-    setLayers({ terrain: false, imagery: true, surface: false, planning: true, grid: true });
+    setTerrainMode("custom");
+    setLayers({ terrain: true, imagery: true, surface: false, planning: true, grid: true });
     setWorkflowStep("planning");
     setView("workspace");
     setStatus("Using flat terrain with imagery overlay fallback while elevation/LiDAR data is unavailable.");
@@ -143,7 +142,16 @@ export default function App() {
       setWorkflowStep("planning");
       setStatus("Terrain generated. Review attribution and adjust the planning volume.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Terrain generation failed.");
+      setTerrainMode("custom");
+      setLayers({ terrain: true, imagery: true, surface: false, planning: true, grid: true });
+      setWorkflowStep("planning");
+      const technicalMessage = error instanceof Error ? error.message : "";
+      const friendlyMessage = /failed to fetch|abort/i.test(technicalMessage)
+        ? "Live terrain service unavailable."
+        : technicalMessage || "Terrain generation failed.";
+      setStatus(
+        `${friendlyMessage} Continuing with editable custom terrain.`,
+      );
     } finally {
       setBusy(false);
     }
@@ -185,7 +193,38 @@ export default function App() {
       setWorkflowStep("export");
       setStatus("GLB export generated with terrain and planning objects.");
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Export failed.");
+      const now = new Date().toISOString();
+      const localJsonExport: ExportRecord = {
+        id: `export-local-${crypto.randomUUID()}`,
+        format: "json",
+        artifactUri: "browser-local://project.json",
+        generatedAt: now,
+        includedLayers: project.layers.map((layer) => layer.id),
+        includedObjects: [object.id],
+        sourceMetadata: project.dataSources,
+      };
+      const localProject = {
+        ...project,
+        objects: [object],
+        exports: [...project.exports, localJsonExport],
+        updatedAt: now,
+      };
+      setProject(localProject);
+      setRecentProjects(
+        saveRecentProject({
+          project: localProject,
+          previewUri: captureScenePreview(),
+          locationLabel: locationLabel(localProject.areaGeometry),
+          savedAt: now,
+        }),
+      );
+      const technicalMessage = error instanceof Error ? error.message : "";
+      const friendlyMessage = /failed to fetch|abort/i.test(technicalMessage)
+        ? "Backend GLB export unavailable."
+        : technicalMessage || "GLB export failed.";
+      setStatus(
+        `${friendlyMessage} Saved a local project JSON export record instead.`,
+      );
     } finally {
       setBusy(false);
     }
@@ -209,78 +248,59 @@ export default function App() {
 
   if (view === "home") {
     return (
-      <main className="app-shell">
-        <header className="app-header home-header">
-          <div className="brand-lockup">
+      <main className="home-shell">
+        <header className="home-page-header">
+          <div className="home-brand">
             <img src="/siteforge-icon.svg" alt="" />
             <div>
               <h1>SiteForge</h1>
-              <p>Public elevation data to rough 3D planning scenes</p>
+              <p>Terrain data to rough 3D planning scenes</p>
             </div>
           </div>
+          <span>Local MVP</span>
         </header>
 
-        <section className="status-band">
-          <div>
-            <strong>Rough planning only</strong>
-            <span>Not surveying, engineering documentation, or construction-ready geometry.</span>
-          </div>
-          <p>{status}</p>
-        </section>
-
-        <ProjectDashboard
-          recentProjects={recentProjects}
-          onBlankProject={startBlankProject}
-          onFortenvegenProject={startFortenvegenProject}
-          onOpenProject={openProject}
-          onDeleteProject={deleteRecent}
-        />
+        <div className="home-projects-wrap">
+          <ProjectDashboard
+            recentProjects={recentProjects}
+            onBlankProject={startBlankProject}
+            onFortenvegenProject={startFortenvegenProject}
+            onOpenProject={openProject}
+            onDeleteProject={deleteRecent}
+          />
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <div className="brand-lockup">
+    <main className="workspace-app">
+      <header className="workspace-topbar">
+        <button type="button" className="home-nav-button" onClick={closeToDashboard} title="Back to projects">
           <img src="/siteforge-icon.svg" alt="" />
-          <div>
-            <h1>SiteForge</h1>
-            <p>{projectName}</p>
-          </div>
+          <Home size={16} />
+        </button>
+        <div className="workspace-title">
+          <strong>{projectName}</strong>
+          <span>{status}</span>
         </div>
         <WorkflowTabs activeStep={workflowStep} onStepChange={setWorkflowStep} />
-        <div className="header-actions">
-          <button type="button" onClick={closeToDashboard}>
-            <Home size={18} /> Projects
-          </button>
-          <button type="button" onClick={generateTerrain} disabled={busy}>
+        <div className="workspace-actions">
+          <button type="button" onClick={generateTerrain} disabled={busy} title="Generate terrain from data">
             <Play size={18} /> Generate terrain
           </button>
-          <button type="button" onClick={handleSave} disabled={!project || busy}>
+          <button type="button" onClick={handleSave} disabled={!project || busy} title="Save project">
             <Save size={18} /> Save
           </button>
-          <button type="button" onClick={handleExport} disabled={!project || busy}>
-            <Download size={18} /> Export GLB
+          <button type="button" onClick={() => setWorkflowStep("export")} disabled={!project || busy} title="Go to export">
+            <Download size={18} /> Export
           </button>
         </div>
       </header>
 
-      <section className="status-band">
-        <div>
-          <strong>Rough planning only</strong>
-          <span>Not surveying, engineering documentation, or construction-ready geometry.</span>
-        </div>
-        <p>{status}</p>
-      </section>
-
       {workflowStep === "terrain" ? (
-        <div className="workflow-shell">
-          <aside className="edge-panel left-edge">
-            <SiteContextPanel project={project} area={area} onProjectNameChange={renameProject} />
-            <IdentityPanel />
-          </aside>
-          <main className="workflow-main">
+        <section className="terrain-data-workspace">
+          <main className="large-preview-surface">
             <MapSelector
               selectedArea={area}
               mapViewMode={mapViewMode}
@@ -288,7 +308,8 @@ export default function App() {
               onFortenvegen={loadFortenvegenData}
             />
           </main>
-          <aside className="edge-panel right-edge">
+          <aside className="layer-config-rail">
+            <SiteContextPanel project={project} area={area} onProjectNameChange={renameProject} />
             <DataLayerPanel
               mapViewMode={mapViewMode}
               layers={layers}
@@ -298,17 +319,16 @@ export default function App() {
               onUseFlatFallback={useFlatFallback}
               hasGeneratedTerrain={Boolean(terrainUrl)}
             />
+            <button type="button" className="primary-next-button" onClick={() => setWorkflowStep("planning")}>
+              Continue to 3D <Box size={17} />
+            </button>
           </aside>
-        </div>
+        </section>
       ) : null}
 
       {workflowStep === "planning" ? (
-        <div className="workflow-shell planning-workflow">
-          <aside className="edge-panel left-edge">
-            <SiteContextPanel project={project} area={area} onProjectNameChange={renameProject} />
-            <LayerQuickToggles layers={layers} onLayerChange={setLayers} />
-          </aside>
-          <main className="workflow-main">
+        <section className="canvas-workspace">
+          <main className="full-scene-surface">
             <SceneViewer
               terrainUrl={terrainUrl}
               object={object}
@@ -318,53 +338,29 @@ export default function App() {
               onObjectChange={setObject}
               onTerrainModeChange={setTerrainMode}
               onTerrainSettingsChange={setTerrainSettings}
+              onLayerChange={setLayers}
             />
           </main>
-          <aside className="edge-panel right-edge">
-            <section className="project-panel">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">Workflow</p>
-                  <h2>Planning focus</h2>
-                </div>
-                <Box size={22} />
-              </div>
-              <p className="fineprint">
-                Keep layer visibility here, but change sources and map overlays in Terrain / Data. Review attribution and
-                warnings before export.
-              </p>
-            </section>
-          </aside>
-        </div>
+        </section>
       ) : null}
 
       {workflowStep === "review" ? (
-        <div className="workflow-shell review-workflow">
-          <aside className="edge-panel left-edge">
+        <section className="review-workspace">
+          <aside className="review-side">
             <SiteContextPanel project={project} area={area} onProjectNameChange={renameProject} />
           </aside>
-          <main className="workflow-main">
+          <main className="review-main">
             <ProjectMetadataPanel project={project} large />
           </main>
-          <aside className="edge-panel right-edge">
-            <LayerQuickToggles layers={layers} onLayerChange={setLayers} />
-          </aside>
-        </div>
+        </section>
       ) : null}
 
       {workflowStep === "export" ? (
-        <div className="workflow-shell export-workflow">
-          <aside className="edge-panel left-edge">
-            <LayerQuickToggles layers={layers} onLayerChange={setLayers} />
-            <ProjectMetadataPanel project={project} />
-          </aside>
-          <main className="workflow-main">
+        <section className="export-workspace">
+          <main className="export-main">
             <ExportPanel project={project} busy={busy} onSave={handleSave} onExport={handleExport} />
           </main>
-          <aside className="edge-panel right-edge">
-            <IdentityPanel />
-          </aside>
-        </div>
+        </section>
       ) : null}
     </main>
   );
@@ -440,54 +436,6 @@ function SiteContextPanel({
   );
 }
 
-function IdentityPanel() {
-  return (
-    <section className="identity-panel">
-      <img src={identityImage} alt="Stylized 3D terrain planning scene" />
-      <div>
-        <p className="eyebrow">Visual language</p>
-        <h2>Terrain, surface, imagery, objects</h2>
-        <p>
-          Bare-earth DTM, future surface data, map texture, and user planning geometry stay separate from day one.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function LayerQuickToggles({
-  layers,
-  onLayerChange,
-}: {
-  layers: LayerVisibility;
-  onLayerChange: (layers: LayerVisibility) => void;
-}) {
-  return (
-    <section className="project-panel">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">Visible layers</p>
-          <h2>3D quick toggles</h2>
-        </div>
-        <Layers size={22} />
-      </div>
-      <div className="layer-toggle-grid compact-layers">
-        {Object.entries(layers).map(([key, value]) => (
-          <label key={key}>
-            <input
-              type="checkbox"
-              checked={value}
-              onChange={(event) => onLayerChange({ ...layers, [key]: event.currentTarget.checked })}
-            />
-            <span>{key}</span>
-          </label>
-        ))}
-      </div>
-      <p className="fineprint">Add or change source data in the Terrain / Data workflow step.</p>
-    </section>
-  );
-}
-
 function ProjectMetadataPanel({ project, large = false }: { project: SiteForgeProject | null; large?: boolean }) {
   return (
     <section className={large ? "project-panel review-panel" : "project-panel"}>
@@ -517,16 +465,12 @@ function ProjectMetadataPanel({ project, large = false }: { project: SiteForgePr
         {project && project.dataSources.length === 0 ? (
           <article>
             <strong>Local starter</strong>
-            <span>Blank/default terrain placeholder</span>
+            <span>Browser-local custom terrain placeholder</span>
             <a href={fallbackPreview()} target="_blank" rel="noreferrer">
               Preview
             </a>
           </article>
         ) : null}
-      </div>
-      <div className="warning-row">
-        <Hammer size={18} />
-        <span>{project?.warnings[0] ?? "All generated output must carry the rough-planning warning."}</span>
       </div>
     </section>
   );

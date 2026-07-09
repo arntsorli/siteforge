@@ -1,4 +1,5 @@
 import { Layers, Map, Mountain, Satellite, ScanLine } from "lucide-react";
+import { useState } from "react";
 
 export type MapViewMode = "map" | "satellite" | "overlay";
 
@@ -47,6 +48,8 @@ const SOURCE_CARDS = [
   },
 ];
 
+type SourceName = (typeof SOURCE_CARDS)[number]["name"];
+
 export function DataLayerPanel({
   mapViewMode,
   layers,
@@ -56,30 +59,43 @@ export function DataLayerPanel({
   onUseFlatFallback,
   hasGeneratedTerrain,
 }: DataLayerPanelProps) {
+  const [selectedSource, setSelectedSource] = useState<SourceName>("Height / DTM");
+  const currentSource = SOURCE_CARDS.find((source) => source.name === selectedSource) ?? SOURCE_CARDS[1];
+  const CurrentIcon = currentSource.icon;
+
   return (
-    <section className="data-panel" aria-label="Data and layer controls">
+    <section className="data-panel compact-data-panel" aria-label="Data and layer controls">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Data views</p>
-          <h2>Fortenvegen source layers</h2>
+          <p className="eyebrow">Configure layer</p>
+          <h2>{currentSource.name}</h2>
         </div>
         <Layers size={22} />
       </div>
 
-      <div className="source-status-grid">
+      <div className="source-tabs" aria-label="Choose data layer">
         {SOURCE_CARDS.map((source) => {
           const Icon = source.icon;
           return (
-            <article key={source.name}>
+            <button
+              key={source.name}
+              type="button"
+              className={selectedSource === source.name ? "active" : ""}
+              onClick={() => setSelectedSource(source.name)}
+              title={source.name}
+            >
               <Icon size={18} />
-              <div>
-                <strong>{source.name}</strong>
-                <span>{source.detail}</span>
-              </div>
-              <mark>{source.status}</mark>
-            </article>
+            </button>
           );
         })}
+      </div>
+
+      <div className="selected-source-card">
+        <CurrentIcon size={22} />
+        <div>
+          <strong>{currentSource.detail}</strong>
+          <span>{currentSource.status}</span>
+        </div>
       </div>
 
       <div className="segmented-control" aria-label="Map view mode">
@@ -95,7 +111,7 @@ export function DataLayerPanel({
         ))}
       </div>
 
-      <div className="layer-toggle-grid">
+      <div className="layer-toggle-grid data-layer-toggles">
         {Object.entries(layers).map(([key, value]) => (
           <label key={key}>
             <input
@@ -112,13 +128,12 @@ export function DataLayerPanel({
 
       <div className="data-actions">
         <button type="button" onClick={onLoadFortenvegenData}>
-          <Map size={18} /> Load Fortenvegen area
+          <Map size={18} /> Load preset
         </button>
         <button type="button" onClick={onUseFlatFallback} disabled={hasGeneratedTerrain}>
-          <Satellite size={18} /> Flat imagery fallback
+          <Satellite size={18} /> Use fallback
         </button>
       </div>
     </section>
   );
 }
-

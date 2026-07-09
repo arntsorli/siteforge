@@ -103,14 +103,25 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
         source: "selection",
         paint: { "line-color": "#17211f", "line-width": 3 },
       });
+      applyMapViewMode(map, mapViewMode);
     });
 
-    return () => map.remove();
+    return () => {
+      mapRef.current = null;
+      map.remove();
+    };
   }, [onAreaChange]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!map) return;
+    if (!map.isStyleLoaded()) {
+      map.once("load", () => {
+        const source = map.getSource("selection") as GeoJSONSource | undefined;
+        source?.setData(polygonFeature);
+      });
+      return;
+    }
     const source = map.getSource("selection") as GeoJSONSource | undefined;
     source?.setData(polygonFeature);
   }, [polygonFeature]);
@@ -130,11 +141,12 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
-    const osmOpacity = mapViewMode === "satellite" ? 0 : mapViewMode === "overlay" ? 0.5 : 1;
-    const satelliteOpacity = mapViewMode === "map" ? 0 : mapViewMode === "overlay" ? 0.7 : 1;
-    map.setPaintProperty("osm", "raster-opacity", osmOpacity);
-    map.setPaintProperty("satellite", "raster-opacity", satelliteOpacity);
+    if (!map) return;
+    if (!map.isStyleLoaded()) {
+      map.once("load", () => applyMapViewMode(map, mapViewMode));
+      return;
+    }
+    applyMapViewMode(map, mapViewMode);
   }, [mapViewMode]);
 
   function useVisibleBounds() {
@@ -178,6 +190,13 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
       </p>
     </section>
   );
+}
+
+function applyMapViewMode(map: Map, mapViewMode: MapViewMode) {
+  const osmOpacity = mapViewMode === "satellite" ? 0 : mapViewMode === "overlay" ? 0.48 : 1;
+  const satelliteOpacity = mapViewMode === "map" ? 0 : mapViewMode === "overlay" ? 0.78 : 1;
+  if (map.getLayer("osm")) map.setPaintProperty("osm", "raster-opacity", osmOpacity);
+  if (map.getLayer("satellite")) map.setPaintProperty("satellite", "raster-opacity", satelliteOpacity);
 }
 
 function pointsToPolygon(points: Position[]): Polygon {

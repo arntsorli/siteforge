@@ -56,3 +56,14 @@ Keep each milestone buildable before committing and pushing.
 - [x] Put data-source changes in the Terrain / Data step and leave only visibility toggles in later steps.
 - [x] Give each workflow step a central canvas/work area with left and right edge panels.
 - [x] Defer camera orbit-target changes until orbit interaction starts.
+
+## Milestone 8 - App Structure Revamp And Fallback Flow
+
+- [x] Rework Home into a project dashboard with a present header and large create-new tile.
+- [x] Make the workspace header compact, with clearer top workflow tabs and a minimal icon home button.
+- [x] Give Terrain / Data a larger map preview and a smaller layer configuration inspector.
+- [x] Give 3D Planning a dominant canvas, floating toolbars, layer dropdown toggles, and overlay editors.
+- [x] Keep custom terrain visible and editable as the offline fallback path.
+- [x] Stop normal orbit/pan/zoom navigation from creating a centered orbit marker.
+- [x] Remove the visible warning banner/row from the app UI.
+- [x] Add short API timeouts so the workflow can finish with local JSON export fallback when GLB export is offline.

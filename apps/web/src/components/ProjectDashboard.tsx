@@ -18,27 +18,26 @@ export function ProjectDashboard({
   onDeleteProject,
 }: ProjectDashboardProps) {
   return (
-    <section className="dashboard-panel" aria-label="Project dashboard">
-      <div className="dashboard-hero">
+    <section className="dashboard-panel home-projects" aria-label="Project dashboard">
+      <div className="dashboard-heading">
         <div>
-          <p className="eyebrow">Project setup</p>
-          <h2>Start blank, open recent, or focus Fortenvegen</h2>
-          <p>
-            SiteForge saves browser-local project records with previews so you can resume rough planning before the
-            backend has full account/project management.
-          </p>
+          <p className="eyebrow">Projects</p>
+          <h2>Open a site or start a new planning scene</h2>
         </div>
-        <div className="dashboard-actions">
-          <button type="button" onClick={onBlankProject}>
-            <Plus size={18} /> Blank project
-          </button>
-          <button type="button" onClick={onFortenvegenProject}>
-            <MapPinned size={18} /> Fortenvegen 100
-          </button>
-        </div>
+        <span>{recentProjects.length} recent</span>
       </div>
 
       <div className="recent-grid">
+        <button type="button" className="project-card create-project-card" onClick={onBlankProject}>
+          <Plus size={54} />
+          <strong>Create new</strong>
+          <span>Start with editable custom terrain</span>
+        </button>
+        <button type="button" className="project-card preset-project-card" onClick={onFortenvegenProject}>
+          <MapPinned size={34} />
+          <strong>Fortenvegen 100</strong>
+          <span>Load the Gran preset area</span>
+        </button>
         {recentProjects.map((entry) => (
           <article className="project-card" key={entry.project.id}>
             <img src={entry.previewUri} alt="" />
@@ -66,12 +65,11 @@ export function ProjectDashboard({
         ))}
         {recentProjects.length === 0 ? (
           <div className="empty-recents">
-            <strong>No recent projects yet</strong>
-            <span>Create a blank or Fortenvegen project, adjust the scene, then save.</span>
+            <strong>No saved projects yet</strong>
+            <span>Create a project, adjust the scene, then save to pin a preview here.</span>
           </div>
         ) : null}
       </div>
     </section>
   );
 }
-

@@ -13,13 +13,23 @@ export function artifactUrl(path?: string): string | undefined {
   return `${API_BASE_URL}${path}`;
 }
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 4500): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 export async function createTerrainJob(area: AreaGeometry): Promise<TerrainJobResponse> {
   const body: TerrainJobRequest = {
     name: "SiteForge terrain scene",
     area,
     providerId: "hoydedata-dtm1",
   };
-  const response = await fetch(`${API_BASE_URL}/terrain/jobs`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/terrain/jobs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -32,7 +42,7 @@ export async function createTerrainJob(area: AreaGeometry): Promise<TerrainJobRe
 }
 
 export async function saveProject(project: SiteForgeProject): Promise<SiteForgeProject> {
-  const response = await fetch(`${API_BASE_URL}/projects/${project.id}`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/projects/${project.id}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ project }),
@@ -42,7 +52,7 @@ export async function saveProject(project: SiteForgeProject): Promise<SiteForgeP
 }
 
 export async function exportGlb(project: SiteForgeProject): Promise<SiteForgeProject> {
-  const response = await fetch(`${API_BASE_URL}/exports/glb`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/exports/glb`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ project }),
@@ -50,4 +60,3 @@ export async function exportGlb(project: SiteForgeProject): Promise<SiteForgePro
   if (!response.ok) throw new Error(await response.text());
   return response.json();
 }
-

@@ -1,12 +1,12 @@
 import { Environment, Grid, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { Canvas, type ThreeEvent, useFrame } from "@react-three/fiber";
 import type { ArchitectureObject } from "@siteforge/shared";
-import { Box, Cuboid, Layers, MousePointer2, Move, Orbit, Pickaxe, Ruler } from "lucide-react";
+import { ChevronDown, Cuboid, Layers, MousePointer2, Move, Orbit, Pickaxe } from "lucide-react";
 import { Suspense, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { LayerVisibility } from "./DataLayerPanel";
 
-export type TerrainMode = "default" | "flat" | "generated";
+export type TerrainMode = "custom" | "flat" | "generated";
 
 export interface TerrainSettings {
   relief: number;
@@ -23,6 +23,7 @@ interface SceneViewerProps {
   onObjectChange: (object: ArchitectureObject) => void;
   onTerrainModeChange: (mode: TerrainMode) => void;
   onTerrainSettingsChange: (settings: TerrainSettings) => void;
+  onLayerChange: (layers: LayerVisibility) => void;
 }
 
 export function SceneViewer({
@@ -34,57 +35,31 @@ export function SceneViewer({
   onObjectChange,
   onTerrainModeChange,
   onTerrainSettingsChange,
+  onLayerChange,
 }: SceneViewerProps) {
   const controlsRef = useRef<any>(null);
-  const pendingOrbitPointRef = useRef<THREE.Vector3 | null>(null);
   const [orbitMarker, setOrbitMarker] = useState<OrbitMarkerState | null>(null);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [toolMode, setToolMode] = useState<"select" | "orbit" | "pan" | "volume" | "terrain">("select");
 
-  function markOrbitPoint(point: THREE.Vector3) {
-    const nextPoint = point.clone();
-    pendingOrbitPointRef.current = nextPoint;
-    setOrbitMarker({ point: nextPoint.toArray(), shownAt: performance.now() });
-  }
-
-  function applyPendingOrbitPoint() {
-    const pendingPoint = pendingOrbitPointRef.current;
-    if (!pendingPoint) return;
-    controlsRef.current?.target.copy(pendingPoint);
-    controlsRef.current?.update();
-    setOrbitMarker({ point: pendingPoint.toArray(), shownAt: performance.now() });
-  }
-
-  function showCurrentOrbitPoint() {
-    const target = controlsRef.current?.target as THREE.Vector3 | undefined;
-    if (target) setOrbitMarker({ point: target.toArray(), shownAt: performance.now() });
-  }
-
-  function handleScenePoint(event: ThreeEvent<PointerEvent>) {
+  function handleOrbitPoint(event: ThreeEvent<MouseEvent>) {
+    if (toolMode !== "orbit") return;
     event.stopPropagation();
-    markOrbitPoint(event.point);
+    const point = event.point.clone();
+    controlsRef.current?.target.copy(point);
+    controlsRef.current?.update();
+    setOrbitMarker({ point: point.toArray(), shownAt: performance.now() });
   }
 
   return (
-    <section className="scene-panel" aria-label="3D terrain scene">
-      <div className="panel-heading">
-        <div>
-          <p className="eyebrow">3D canvas</p>
-          <h2>Terrain and planning layers</h2>
-        </div>
-        <div className="layer-legend" aria-label="Scene layers">
-          <span>
-            <Layers size={15} /> DTM
-          </span>
-          <span>
-            <Box size={15} /> volume
-          </span>
-          <span>
-            <Ruler size={15} /> grid
-          </span>
-        </div>
-      </div>
+    <section className="scene-panel scene-panel-full" aria-label="3D terrain scene">
       <div className="scene-canvas" onContextMenu={(event) => event.preventDefault()}>
-        <div className="tool-strip" aria-label="3D tools">
+        <div className="scene-title-chip">
+          <strong>3D Planning</strong>
+          <span>{terrainMode === "generated" ? "Generated terrain" : "Editable custom terrain"}</span>
+        </div>
+
+        <div className="tool-strip floating-tool-strip" aria-label="3D tools">
           {[
             ["select", MousePointer2],
             ["orbit", Orbit],
@@ -106,17 +81,146 @@ export function SceneViewer({
             );
           })}
         </div>
-        <Canvas
-          camera={{ position: [55, 42, 58], fov: 46 }}
-          gl={{ preserveDrawingBuffer: true }}
-          onWheel={showCurrentOrbitPoint}
-          shadows
-        >
+
+        <div className="canvas-layer-dropdown">
+          <button type="button" onClick={() => setLayersOpen((open) => !open)}>
+            <Layers size={17} /> Layers <ChevronDown size={15} />
+          </button>
+          {layersOpen ? (
+            <div className="canvas-layer-menu">
+              {Object.entries(layers).map(([key, value]) => (
+                <label key={key}>
+                  <input
+                    type="checkbox"
+                    checked={value}
+                    onChange={(event) => onLayerChange({ ...layers, [key]: event.currentTarget.checked })}
+                  />
+                  <span>{key}</span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {toolMode === "orbit" ? (
+          <div className="canvas-hint">
+            Double-click terrain to set the orbit point. Orbit, pan, and zoom will not move it.
+          </div>
+        ) : null}
+
+        {toolMode === "volume" ? (
+          <div className="floating-editor object-editor">
+            <label>
+              Height
+              <input
+                type="range"
+                min="2"
+                max="12"
+                step="0.5"
+                value={object.heightMeters}
+                onChange={(event) =>
+                  onObjectChange({ ...object, heightMeters: Number(event.currentTarget.value) })
+                }
+              />
+              <strong>{object.heightMeters.toFixed(1)} m</strong>
+            </label>
+            <label>
+              Roof pitch
+              <input
+                type="range"
+                min="0"
+                max="45"
+                step="1"
+                value={object.roofPitchDegrees}
+                onChange={(event) =>
+                  onObjectChange({ ...object, roofPitchDegrees: Number(event.currentTarget.value) })
+                }
+              />
+              <strong>{object.roofPitchDegrees} deg</strong>
+            </label>
+            <label>
+              Roof
+              <select
+                value={object.roofType}
+                onChange={(event) =>
+                  onObjectChange({ ...object, roofType: event.currentTarget.value as ArchitectureObject["roofType"] })
+                }
+              >
+                <option value="gable">Gable</option>
+                <option value="flat">Flat</option>
+                <option value="hip">Hip</option>
+                <option value="shed">Shed</option>
+              </select>
+            </label>
+          </div>
+        ) : null}
+
+        {toolMode === "terrain" ? (
+          <div className="floating-editor terrain-editor">
+            <label>
+              Terrain
+              <select
+                value={terrainMode}
+                onChange={(event) => onTerrainModeChange(event.currentTarget.value as TerrainMode)}
+              >
+                <option value="custom">Custom editable</option>
+                <option value="flat">Flat fallback</option>
+                <option value="generated" disabled={!terrainUrl}>
+                  Generated DTM
+                </option>
+              </select>
+            </label>
+            <label>
+              Relief
+              <input
+                type="range"
+                min="0"
+                max="16"
+                step="0.5"
+                value={terrainSettings.relief}
+                onChange={(event) =>
+                  onTerrainSettingsChange({ ...terrainSettings, relief: Number(event.currentTarget.value) })
+                }
+              />
+              <strong>{terrainSettings.relief.toFixed(1)} m</strong>
+            </label>
+            <label>
+              Flatten
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={terrainSettings.flatten}
+                onChange={(event) =>
+                  onTerrainSettingsChange({ ...terrainSettings, flatten: Number(event.currentTarget.value) })
+                }
+              />
+              <strong>{Math.round(terrainSettings.flatten * 100)}%</strong>
+            </label>
+            <label>
+              Ridge
+              <input
+                type="range"
+                min="-8"
+                max="8"
+                step="0.5"
+                value={terrainSettings.ridge}
+                onChange={(event) =>
+                  onTerrainSettingsChange({ ...terrainSettings, ridge: Number(event.currentTarget.value) })
+                }
+              />
+              <strong>{terrainSettings.ridge.toFixed(1)} m</strong>
+            </label>
+          </div>
+        ) : null}
+
+        <Canvas camera={{ position: [55, 42, 58], fov: 46 }} gl={{ preserveDrawingBuffer: true }} shadows>
           <color attach="background" args={["#dce8df"]} />
           <ambientLight intensity={0.7} />
           <directionalLight position={[28, 50, 22]} intensity={1.8} castShadow />
-          <group onPointerDown={handleScenePoint}>
-            <Suspense fallback={<SimulatorTerrain terrainSettings={terrainSettings} mode="default" />}>
+          <group onDoubleClick={handleOrbitPoint}>
+            <Suspense fallback={<SimulatorTerrain terrainSettings={terrainSettings} mode="custom" />}>
               {layers.terrain ? (
                 terrainMode === "generated" && terrainUrl ? (
                   <TerrainModel url={terrainUrl} />
@@ -138,10 +242,8 @@ export function SceneViewer({
             ref={controlsRef}
             makeDefault
             enableDamping
-            dampingFactor={0.16}
+            dampingFactor={0.18}
             screenSpacePanning
-            onStart={applyPendingOrbitPoint}
-            onEnd={showCurrentOrbitPoint}
             mouseButtons={{
               LEFT: THREE.MOUSE.ROTATE,
               MIDDLE: THREE.MOUSE.DOLLY,
@@ -149,107 +251,6 @@ export function SceneViewer({
             }}
           />
         </Canvas>
-      </div>
-      <div className="object-editor">
-        <label>
-          Height
-          <input
-            type="range"
-            min="2"
-            max="12"
-            step="0.5"
-            value={object.heightMeters}
-            onChange={(event) =>
-              onObjectChange({ ...object, heightMeters: Number(event.currentTarget.value) })
-            }
-          />
-          <strong>{object.heightMeters.toFixed(1)} m</strong>
-        </label>
-        <label>
-          Roof pitch
-          <input
-            type="range"
-            min="0"
-            max="45"
-            step="1"
-            value={object.roofPitchDegrees}
-            onChange={(event) =>
-              onObjectChange({ ...object, roofPitchDegrees: Number(event.currentTarget.value) })
-            }
-          />
-          <strong>{object.roofPitchDegrees}°</strong>
-        </label>
-        <label>
-          Roof
-          <select
-            value={object.roofType}
-            onChange={(event) =>
-              onObjectChange({ ...object, roofType: event.currentTarget.value as ArchitectureObject["roofType"] })
-            }
-          >
-            <option value="gable">Gable</option>
-            <option value="flat">Flat</option>
-            <option value="hip">Hip</option>
-            <option value="shed">Shed</option>
-          </select>
-        </label>
-      </div>
-      <div className="terrain-editor">
-        <label>
-          Terrain
-          <select
-            value={terrainMode}
-            onChange={(event) => onTerrainModeChange(event.currentTarget.value as TerrainMode)}
-          >
-            <option value="default">Default model</option>
-            <option value="flat">Flat fallback</option>
-            <option value="generated" disabled={!terrainUrl}>
-              Generated DTM
-            </option>
-          </select>
-        </label>
-        <label>
-          Relief
-          <input
-            type="range"
-            min="0"
-            max="16"
-            step="0.5"
-            value={terrainSettings.relief}
-            onChange={(event) =>
-              onTerrainSettingsChange({ ...terrainSettings, relief: Number(event.currentTarget.value) })
-            }
-          />
-          <strong>{terrainSettings.relief.toFixed(1)} m</strong>
-        </label>
-        <label>
-          Flatten
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={terrainSettings.flatten}
-            onChange={(event) =>
-              onTerrainSettingsChange({ ...terrainSettings, flatten: Number(event.currentTarget.value) })
-            }
-          />
-          <strong>{Math.round(terrainSettings.flatten * 100)}%</strong>
-        </label>
-        <label>
-          Ridge
-          <input
-            type="range"
-            min="-8"
-            max="8"
-            step="0.5"
-            value={terrainSettings.ridge}
-            onChange={(event) =>
-              onTerrainSettingsChange({ ...terrainSettings, ridge: Number(event.currentTarget.value) })
-            }
-          />
-          <strong>{terrainSettings.ridge.toFixed(1)} m</strong>
-        </label>
       </div>
     </section>
   );
