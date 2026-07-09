@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>SiteForge</title>
+  <rect width="64" height="64" rx="14" fill="#17211f"/>
+  <path d="M10 42 24 26l11 8 8-13 11 21H10Z" fill="#6f8f5f"/>
+  <path d="m10 46 14-8 12 5 18-9v8L37 53l-13-5-14 7v-9Z" fill="#d7894a"/>
+  <path d="M20 20h12v12H20z" fill="#f2e7d3" opacity=".95"/>
+  <path d="m32 20 5 5v7h-5V20Z" fill="#c65f3e"/>
+  <path d="M11 42h42" stroke="#f2e7d3" stroke-width="2" opacity=".7"/>
+</svg>
+
