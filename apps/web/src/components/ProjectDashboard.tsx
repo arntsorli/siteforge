@@ -5,7 +5,7 @@ import type { RecentProject } from "../lib/projects";
 interface ProjectDashboardProps {
   recentProjects: RecentProject[];
   onBlankProject: () => void;
-  onFortenvegenProject: () => void;
+  onDemoProject: () => void;
   onOpenProject: (project: SiteForgeProject) => void;
   onDeleteProject: (projectId: string) => void;
 }
@@ -13,7 +13,7 @@ interface ProjectDashboardProps {
 export function ProjectDashboard({
   recentProjects,
   onBlankProject,
-  onFortenvegenProject,
+  onDemoProject,
   onOpenProject,
   onDeleteProject,
 }: ProjectDashboardProps) {
@@ -33,10 +33,10 @@ export function ProjectDashboard({
           <strong>Create new</strong>
           <span>Start with editable custom terrain</span>
         </button>
-        <button type="button" className="project-card preset-project-card" onClick={onFortenvegenProject}>
+        <button type="button" className="project-card preset-project-card" onClick={onDemoProject}>
           <MapPinned size={34} />
-          <strong>Fortenvegen 100</strong>
-          <span>Load the Gran preset area</span>
+          <strong>Norway demo</strong>
+          <span>Load a neutral sample area</span>
         </button>
         {recentProjects.map((entry) => (
           <article className="project-card" key={entry.project.id}>

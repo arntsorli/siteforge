@@ -17,10 +17,9 @@ import {
   DEFAULT_OBJECT,
   deleteRecentProject,
   fallbackPreview,
-  FORTENVEGEN_AREA,
   loadRecentProjects,
   locationLabel,
-  OSLO_SAMPLE_AREA,
+  NORWAY_DEMO_AREA,
   saveRecentProject,
   type RecentProject,
 } from "./lib/projects";
@@ -29,7 +28,7 @@ type AppView = "home" | "workspace";
 type WorkflowStep = "terrain" | "planning" | "review" | "export";
 
 export default function App() {
-  const [area, setArea] = useState<AreaGeometry>(FORTENVEGEN_AREA);
+  const [area, setArea] = useState<AreaGeometry>(NORWAY_DEMO_AREA);
   const [project, setProject] = useState<SiteForgeProject | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>("terrain");
@@ -64,7 +63,7 @@ export default function App() {
   );
 
   function startBlankProject() {
-    const nextProject = createLocalProject("Blank SiteForge project", OSLO_SAMPLE_AREA);
+    const nextProject = createLocalProject("Blank SiteForge project", NORWAY_DEMO_AREA);
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
     setObjects(nextProject.objects.length ? nextProject.objects : [DEFAULT_OBJECT]);
@@ -75,8 +74,8 @@ export default function App() {
     setStatus("Blank project opened with a basic terrain canvas.");
   }
 
-  function startFortenvegenProject() {
-    const nextProject = createLocalProject("Fortenvegen 100, Gran", FORTENVEGEN_AREA);
+  function startDemoProject() {
+    const nextProject = createLocalProject("Norway demo site", NORWAY_DEMO_AREA);
     setProject(nextProject);
     setArea(nextProject.areaGeometry);
     setObjects(nextProject.objects.length ? nextProject.objects : [DEFAULT_OBJECT]);
@@ -85,28 +84,28 @@ export default function App() {
     setTerrainMode("custom");
     setWorkflowStep("terrain");
     setView("workspace");
-    setStatus("Fortenvegen project opened. Load map/elevation data when ready.");
+    setStatus("Demo project opened. Load map/elevation data when ready.");
   }
 
-  function loadFortenvegenData() {
+  function loadDemoData() {
     if (!project) {
-      startFortenvegenProject();
+      startDemoProject();
     } else {
       setProject({
         ...project,
-        name: project.name || "Fortenvegen 100, Gran",
-        areaGeometry: FORTENVEGEN_AREA,
+        name: project.name || "Norway demo site",
+        areaGeometry: NORWAY_DEMO_AREA,
         updatedAt: new Date().toISOString(),
       });
-      setArea(FORTENVEGEN_AREA);
+      setArea(NORWAY_DEMO_AREA);
     }
     setMapViewMode("overlay");
     setLayers({ terrain: true, imagery: true, surface: true, planning: true, grid: true });
-    setStatus("Fortenvegen map, imagery fallback, DTM request, and future surface layer are staged.");
+    setStatus("Demo map, imagery fallback, DTM request, and future surface layer are staged.");
   }
 
   function useFlatFallback() {
-    const workingProject = project ?? createLocalProject("Flat imagery fallback project", FORTENVEGEN_AREA);
+    const workingProject = project ?? createLocalProject("Flat imagery fallback project", NORWAY_DEMO_AREA);
     setProject(workingProject);
     setArea(workingProject.areaGeometry);
     setObjects(workingProject.objects.length ? workingProject.objects : [DEFAULT_OBJECT]);
@@ -282,7 +281,7 @@ export default function App() {
           <ProjectDashboard
             recentProjects={recentProjects}
             onBlankProject={startBlankProject}
-            onFortenvegenProject={startFortenvegenProject}
+            onDemoProject={startDemoProject}
             onOpenProject={openProject}
             onDeleteProject={deleteRecent}
           />
@@ -323,7 +322,7 @@ export default function App() {
               selectedArea={area}
               mapViewMode={mapViewMode}
               onAreaChange={setArea}
-              onFortenvegen={loadFortenvegenData}
+              onDemoArea={loadDemoData}
             />
           </main>
           <aside className="layer-config-rail">
@@ -340,7 +339,7 @@ export default function App() {
               onMapViewModeChange={setMapViewMode}
               onLayerChange={setLayers}
               onLidarFileChange={stageLidarFile}
-              onLoadFortenvegenData={loadFortenvegenData}
+              onLoadDemoData={loadDemoData}
               onUseFlatFallback={useFlatFallback}
               hasGeneratedTerrain={Boolean(terrainUrl)}
             />

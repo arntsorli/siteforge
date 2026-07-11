@@ -17,7 +17,7 @@ interface DataLayerPanelProps {
   onMapViewModeChange: (mode: MapViewMode) => void;
   onLayerChange: (layers: LayerVisibility) => void;
   onLidarFileChange: (file: File | null) => void;
-  onLoadFortenvegenData: () => void;
+  onLoadDemoData: () => void;
   onUseFlatFallback: () => void;
   hasGeneratedTerrain: boolean;
 }
@@ -29,7 +29,7 @@ export function DataLayerPanel({
   onMapViewModeChange,
   onLayerChange,
   onLidarFileChange,
-  onLoadFortenvegenData,
+  onLoadDemoData,
   onUseFlatFallback,
   hasGeneratedTerrain,
 }: DataLayerPanelProps) {
@@ -69,8 +69,8 @@ export function DataLayerPanel({
         </div>
         <p className="fineprint no-margin">Use Hoydedata DTM when available, or continue with editable custom terrain.</p>
         <div className="data-actions">
-          <button type="button" onClick={onLoadFortenvegenData}>
-            <Map size={18} /> Fortenvegen preset
+          <button type="button" onClick={onLoadDemoData}>
+            <Map size={18} /> Demo area
           </button>
           <button type="button" onClick={onUseFlatFallback} disabled={hasGeneratedTerrain}>
             <Mountain size={18} /> Custom fallback

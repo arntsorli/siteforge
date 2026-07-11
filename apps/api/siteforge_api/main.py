@@ -15,7 +15,7 @@ from siteforge_api.schemas import (
     TerrainJobRequest,
     TerrainJobResponse,
 )
-from siteforge_api.services.data_status import fortenvegen_data_status
+from siteforge_api.services.data_status import demo_area_data_status
 from siteforge_api.services.geometry import GeometryError
 from siteforge_api.services.projects import export_project_glb, load_project, save_project
 from siteforge_api.services.terrain import TerrainGenerationError, generate_terrain_project
@@ -60,9 +60,9 @@ async def providers(provider: ProviderDep) -> list[ProviderInfo]:
     return [provider.info()]
 
 
-@app.get("/areas/fortenvegen/data-sources", response_model=AreaDataStatus)
-async def fortenvegen_sources(settings: SettingsDep) -> AreaDataStatus:
-    return fortenvegen_data_status(settings)
+@app.get("/areas/demo/data-sources", response_model=AreaDataStatus)
+async def demo_area_sources(settings: SettingsDep) -> AreaDataStatus:
+    return demo_area_data_status(settings)
 
 
 @app.post("/terrain/jobs", response_model=TerrainJobResponse)

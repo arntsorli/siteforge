@@ -1,23 +1,23 @@
 from siteforge_api.schemas import AreaDataStatus, BBoxGeometry, DataSourceStatus
 from siteforge_api.settings import Settings
 
-FORTENVEGEN_AREA = BBoxGeometry(
-    west=10.5006,
-    south=60.3724,
-    east=10.5054,
-    north=60.3748,
+DEMO_AREA = BBoxGeometry(
+    west=10.7522,
+    south=59.9135,
+    east=10.754,
+    north=59.9148,
 )
 
 
-def fortenvegen_data_status(settings: Settings) -> AreaDataStatus:
+def demo_area_data_status(settings: Settings) -> AreaDataStatus:
     dtm_cache_dir = settings.cache_dir / "hoydedata-dtm1"
     cached_tiles = sorted(dtm_cache_dir.glob("*.tif")) if dtm_cache_dir.exists() else []
     dtm_status = "cached" if cached_tiles else "live"
 
     return AreaDataStatus(
-        id="fortenvegen-100-gran",
-        label="Fortenvegen 100, 2750 Gran",
-        area=FORTENVEGEN_AREA,
+        id="norway-demo-area",
+        label="Norway demo area",
+        area=DEMO_AREA,
         sources=[
             DataSourceStatus(
                 id="openstreetmap-base",
@@ -89,10 +89,6 @@ def fortenvegen_data_status(settings: Settings) -> AreaDataStatus:
             (
                 "Rough planning only; verify all dimensions and elevations before "
                 "design or construction use."
-            ),
-            (
-                "Fortenvegen preset is based on OpenStreetMap/Nominatim geocoding "
-                "and should be checked."
             ),
         ],
     )

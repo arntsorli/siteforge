@@ -9,10 +9,10 @@ interface MapSelectorProps {
   selectedArea: AreaGeometry;
   mapViewMode: MapViewMode;
   onAreaChange: (area: AreaGeometry) => void;
-  onFortenvegen: () => void;
+  onDemoArea: () => void;
 }
 
-const OSLO_TEST_AREA: AreaGeometry = {
+const DEMO_TEST_AREA: AreaGeometry = {
   type: "BBox",
   west: 10.7522,
   south: 59.9135,
@@ -20,7 +20,7 @@ const OSLO_TEST_AREA: AreaGeometry = {
   north: 59.9148,
 };
 
-export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenvegen }: MapSelectorProps) {
+export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onDemoArea }: MapSelectorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const pointsRef = useRef<Position[]>([]);
@@ -179,10 +179,10 @@ export function MapSelector({ selectedArea, mapViewMode, onAreaChange, onFortenv
           <h2>Draw or frame a site</h2>
         </div>
         <div className="toolbar">
-          <button type="button" onClick={() => onAreaChange(OSLO_TEST_AREA)} title="Use small Oslo test area">
+          <button type="button" onClick={() => onAreaChange(DEMO_TEST_AREA)} title="Use small demo test area">
             <LocateFixed size={18} />
           </button>
-          <button type="button" onClick={onFortenvegen} title="Use Fortenvegen 100 preset">
+          <button type="button" onClick={onDemoArea} title="Use neutral demo area">
             <Home size={18} />
           </button>
           <button type="button" onClick={useVisibleBounds} title="Use visible map bounds">
